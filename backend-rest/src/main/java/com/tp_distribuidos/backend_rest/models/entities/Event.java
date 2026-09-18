@@ -9,6 +9,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
@@ -22,7 +23,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "events")
+@Table(name = "events", indexes = {
+        @Index(name = "idx_events_datetime", columnList = "datetime"),
+        @Index(name = "idx_events_lead_curator_id", columnList = "lead_curator_id"),
+        @Index(name = "idx_events_type_datetime", columnList = "event_type, datetime")
+})
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Event {

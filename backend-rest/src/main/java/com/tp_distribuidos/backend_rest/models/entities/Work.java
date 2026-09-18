@@ -9,6 +9,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
@@ -21,7 +22,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "works")
+@Table(name = "works", indexes = {
+        @Index(name = "idx_works_artist_id", columnList = "artist_id"),
+        @Index(name = "idx_works_title", columnList = "title"),
+        @Index(name = "idx_works_era", columnList = "era")
+})
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Work {
@@ -37,7 +42,7 @@ public class Work {
     @JoinColumn(name = "artist_id", nullable = false)
     private Artist artist;
 
-    @Column(name = "image_url", length = 500)
+    @Column(name = "image_url", nullable = false, length = 500)
     private String imageUrl;
 
     @Column(name = "creation_year")
@@ -59,23 +64,18 @@ public class Work {
     private String location;
 
     @Enumerated(EnumType.STRING)
-    @Column(length = 20)
+    @Column(nullable = false, length = 20)
     private WorkAvailability availability;
 
     @OneToMany(mappedBy = "work", fetch = FetchType.LAZY)
     private List<Comment> comments = new ArrayList<>();
 
-    public static Work of(String title, Artist artist) {
-        Work work = new Work();
-        work.title = title;
-        work.artist = artist;
-        return work;
-    }
-
     public static Work of(String title, Artist artist, String imageUrl, Integer creationYear,
                           String technique, String dimensions, String era, String description,
                           String location, WorkAvailability availability) {
-        Work work = of(title, artist);
+        Work work = new Work();
+        work.title = title;
+        work.artist = artist;
         work.imageUrl = imageUrl;
         work.creationYear = creationYear;
         work.technique = technique;

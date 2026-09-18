@@ -7,9 +7,11 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -17,7 +19,11 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 @Entity
-@Table(name = "saved_event_filters")
+@Table(name = "saved_event_filters", indexes = {
+        @Index(name = "idx_saved_filters_user_id", columnList = "user_id")
+}, uniqueConstraints = {
+        @UniqueConstraint(name = "uq_saved_filters_user_name", columnNames = {"user_id", "name"})
+})
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class SavedEventFilter {
