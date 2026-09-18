@@ -22,3 +22,6 @@ spring:
       mode: always
       schema-locations: classpath:schema.sql
       data-locations: classpath:data.sql
+
+server:
+  port: 8081
