@@ -25,3 +25,10 @@ spring:
 
 server:
   port: 8081
+
+app:
+  security:
+    jwt:
+      issuer: ${JWT_ISSUER:museo-virtual}
+      secret: ${JWT_SECRET:dev-only-secret-key-change-me-please-0123456789}
+      expiration: ${JWT_EXPIRATION:3600}
