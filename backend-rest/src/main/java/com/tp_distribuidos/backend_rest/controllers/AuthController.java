@@ -2,46 +2,53 @@ package com.tp_distribuidos.backend_rest.controllers;
 
 import com.tp_distribuidos.backend_rest.dtos.RegisterRequestDTO;
 import com.tp_distribuidos.backend_rest.services.AuthService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Controlador REST de autenticación.
- *
- * <p>Expone los endpoints públicos de registro (y, a futuro, de login).</p>
- */
 @RestController
 @RequestMapping("/api/rest/auth")
+@Tag(name = "Autenticación", description = "Registro y login de usuarios.")
 public class AuthController {
 
     private final AuthService authService;
 
-    /**
-     * Crea el controlador con el servicio de autenticación.
-     *
-     * @param authService servicio con la lógica de registro.
-     */
     public AuthController(AuthService authService) {
         this.authService = authService;
     }
 
-    /**
-     * Registra un nuevo usuario en el sistema.
-     *
-     * <p>Endpoint público. Ante un registro exitoso responde únicamente con
-     * {@code 201 Created} y sin cuerpo; no devuelve token. Los errores de
-     * validación o de negocio son traducidos por el
-     * {@code GlobalExceptionHandler} a respuestas {@code ProblemDetail}.</p>
-     *
-     * @param request datos del formulario de registro.
-     */
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(
+            summary = "Registrar un nuevo usuario",
+            description = "Endpoint público que crea un usuario con rol VISITANTE. No emite token: "
+                    + "ante un registro exitoso responde únicamente 201 Created sin cuerpo.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Usuario creado correctamente."),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Datos inválidos o la contraseña y su confirmación no coinciden.",
+                    content = @Content(
+                            mediaType = "application/problem+json",
+                            schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "Ya existe un usuario registrado con ese email.",
+                    content = @Content(
+                            mediaType = "application/problem+json",
+                            schema = @Schema(implementation = ProblemDetail.class)))
+    })
     public void register(@Valid @RequestBody RegisterRequestDTO request) {
         authService.register(request);
     }

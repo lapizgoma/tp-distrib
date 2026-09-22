@@ -33,6 +33,7 @@ public class SecurityConfig {
      *     <li>CSRF deshabilitado, al ser una API stateless.</li>
      *     <li>Sin sesiones ({@link SessionCreationPolicy#STATELESS}).</li>
      *     <li>{@code POST /api/rest/auth/register} público para cualquiera.</li>
+     *     <li>Swagger UI y el documento OpenAPI públicos.</li>
      *     <li>El resto de las rutas queda abierto provisoriamente.</li>
      * </ul>
      * </p>
@@ -58,7 +59,12 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/rest/auth/register").permitAll()
+                        .requestMatchers(
+                                "/api/rest/auth/register",
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**")
+                        .permitAll()
                         // TODO: reemplazar por .anyRequest().authenticated() junto con el filtro JWT.
                         .anyRequest().permitAll());
         return http.build();
