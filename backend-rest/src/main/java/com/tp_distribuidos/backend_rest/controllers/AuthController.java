@@ -1,5 +1,7 @@
 package com.tp_distribuidos.backend_rest.controllers;
 
+import com.tp_distribuidos.backend_rest.dtos.LoginRequestDTO;
+import com.tp_distribuidos.backend_rest.dtos.LoginResponseDTO;
 import com.tp_distribuidos.backend_rest.dtos.RegisterRequestDTO;
 import com.tp_distribuidos.backend_rest.services.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -51,5 +53,34 @@ public class AuthController {
     })
     public void register(@Valid @RequestBody RegisterRequestDTO request) {
         authService.register(request);
+    }
+
+    @PostMapping("/login")
+    @Operation(
+            summary = "Iniciar sesión",
+            description = "Endpoint público que valida las credenciales y devuelve un token JWT "
+                    + "para autenticar las siguientes peticiones mediante el header Authorization: Bearer <token>.")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Autenticación exitosa.",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = LoginResponseDTO.class))),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Datos inválidos en la petición.",
+                    content = @Content(
+                            mediaType = "application/problem+json",
+                            schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Credenciales inválidas.",
+                    content = @Content(
+                            mediaType = "application/problem+json",
+                            schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    public LoginResponseDTO login(@Valid @RequestBody LoginRequestDTO request) {
+        return authService.login(request);
     }
 }

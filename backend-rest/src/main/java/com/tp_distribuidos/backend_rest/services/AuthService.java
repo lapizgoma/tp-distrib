@@ -1,11 +1,18 @@
 package com.tp_distribuidos.backend_rest.services;
 
+import com.tp_distribuidos.backend_rest.dtos.LoginRequestDTO;
+import com.tp_distribuidos.backend_rest.dtos.LoginResponseDTO;
 import com.tp_distribuidos.backend_rest.dtos.RegisterRequestDTO;
 import com.tp_distribuidos.backend_rest.enums.UserRole;
 import com.tp_distribuidos.backend_rest.exceptions.EmailAlreadyExistsException;
 import com.tp_distribuidos.backend_rest.exceptions.PasswordsDoNotMatchException;
 import com.tp_distribuidos.backend_rest.models.entities.User;
 import com.tp_distribuidos.backend_rest.repositories.UserRepository;
+import com.tp_distribuidos.backend_rest.security.JwtService;
+import com.tp_distribuidos.backend_rest.security.SecurityUser;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,26 +22,34 @@ import java.util.Locale;
 /**
  * Servicio con la lógica de negocio de autenticación y registro de usuarios.
  *
- * <p>Es el encargado de validar los datos recibidos, verificar que el email no
- * esté en uso, hashear la contraseña y persistir el nuevo usuario con el rol
- * por defecto {@link UserRole#VISITANTE}. No emite tokens: la emisión de JWT
- * quedará a cargo del futuro endpoint de login.</p>
+ * <p>Es el encargado de registrar nuevos usuarios (validando email único,
+ * contraseña confirmada y hasheada con BCrypt) y de autenticar credenciales
+ * para emitir un token JWT al iniciar sesión.</p>
  */
 @Service
 public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
+    private final JwtService jwtService;
 
     /**
      * Crea el servicio con sus dependencias.
      *
-     * @param userRepository  repositorio de usuarios.
-     * @param passwordEncoder encoder usado para hashear las contraseñas.
+     * @param userRepository       repositorio de usuarios.
+     * @param passwordEncoder      encoder usado para hashear las contraseñas.
+     * @param authenticationManager manager que valida las credenciales.
+     * @param jwtService           servicio emisor del token JWT.
      */
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public AuthService(UserRepository userRepository,
+                       PasswordEncoder passwordEncoder,
+                       AuthenticationManager authenticationManager,
+                       JwtService jwtService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.authenticationManager = authenticationManager;
+        this.jwtService = jwtService;
     }
 
     /**
@@ -72,5 +87,29 @@ public class AuthService {
                 request.lastName().trim());
 
         userRepository.save(user);
+    }
+
+    /**
+     * Autentica las credenciales del usuario y emite un token JWT.
+     *
+     * <p>Delega la verificación en {@link AuthenticationManager}, que compara la
+     * contraseña contra el hash almacenado en la base de datos. Si la
+     * autenticación es exitosa, genera el token con {@link JwtService}.</p>
+     *
+     * @param request credenciales de inicio de sesión.
+     * @return el token de acceso junto con su tipo y expiración.
+     * @throws org.springframework.security.core.AuthenticationException si las
+     *         credenciales son inválidas.
+     */
+    public LoginResponseDTO login(LoginRequestDTO request) {
+        String email = request.email().trim().toLowerCase(Locale.ROOT);
+
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(email, request.password()));
+
+        SecurityUser securityUser = (SecurityUser) authentication.getPrincipal();
+        String accessToken = jwtService.generateToken(securityUser);
+
+        return LoginResponseDTO.of(accessToken, jwtService.getExpirationSeconds());
     }
 }
