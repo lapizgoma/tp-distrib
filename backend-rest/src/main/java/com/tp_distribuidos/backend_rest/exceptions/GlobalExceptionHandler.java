@@ -2,6 +2,7 @@ package com.tp_distribuidos.backend_rest.exceptions;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -40,6 +41,20 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(PasswordsDoNotMatchException.class)
     public ProblemDetail handlePasswordsDoNotMatch(PasswordsDoNotMatchException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    /**
+     * Maneja las credenciales inválidas durante el login.
+     *
+     * <p>Devuelve un mensaje genérico para no revelar si el email existe o no en
+     * el sistema, evitando la enumeración de usuarios.</p>
+     *
+     * @param ex excepción lanzada por el {@code AuthenticationManager}.
+     * @return un {@link ProblemDetail} con estado {@code 401 Unauthorized}.
+     */
+    @ExceptionHandler(AuthenticationException.class)
+    public ProblemDetail handleAuthenticationException(AuthenticationException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, "Credenciales inválidas");
     }
 
     /**

@@ -14,9 +14,10 @@ import java.util.Date;
  * Servicio emisor y verificador de JSON Web Tokens.
  *
  * <p>Implementa el rol de <em>Issuer</em> del backend REST usando firma
- * simétrica HMAC-SHA256. El registro de usuarios no emite tokens; este servicio
- * queda preparado para el futuro endpoint de login, que sí deberá generar el
- * token, y para cualquier verificación puntual dentro del servicio.</p>
+ * simétrica HMAC-SHA256. El login emite el token con {@link #generateToken}, y
+ * el {@code JwtAuthenticationFilter} lo verifica con {@link #parseToken} en cada
+ * petición. No se utiliza Redis ni ningún almacén externo: la validez se apoya
+ * únicamente en la firma del token y en los datos de usuario de la base.</p>
  */
 @Service
 public class JwtService {
@@ -73,5 +74,14 @@ public class JwtService {
                 .build()
                 .parseSignedClaims(token);
         return jws.getPayload();
+    }
+
+    /**
+     * Devuelve el tiempo de vida configurado para los tokens, en segundos.
+     *
+     * @return la expiración en segundos.
+     */
+    public long getExpirationSeconds() {
+        return properties.expiration().toSeconds();
     }
 }
