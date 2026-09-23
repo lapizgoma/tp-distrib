@@ -3,6 +3,7 @@ package com.tp_distribuidos.backend_rest.services;
 import com.tp_distribuidos.backend_rest.dtos.LoginRequestDTO;
 import com.tp_distribuidos.backend_rest.dtos.LoginResponseDTO;
 import com.tp_distribuidos.backend_rest.dtos.RegisterRequestDTO;
+import com.tp_distribuidos.backend_rest.dtos.UserResponseDTO;
 import com.tp_distribuidos.backend_rest.enums.UserRole;
 import com.tp_distribuidos.backend_rest.exceptions.EmailAlreadyExistsException;
 import com.tp_distribuidos.backend_rest.exceptions.PasswordsDoNotMatchException;
@@ -111,5 +112,20 @@ public class AuthService {
         String accessToken = jwtService.generateToken(securityUser);
 
         return LoginResponseDTO.of(accessToken, jwtService.getExpirationSeconds());
+    }
+
+    /**
+     * Devuelve los datos básicos del usuario autenticado.
+     *
+     * <p>El usuario ya fue cargado desde la base de datos por
+     * {@code JwtAuthenticationFilter} y se recibe como principal, por lo que no
+     * se realiza una nueva consulta.</p>
+     *
+     * @param user usuario autenticado obtenido del token JWT.
+     * @return los datos básicos del usuario.
+     */
+    @Transactional(readOnly = true)
+    public UserResponseDTO getCurrentUser(SecurityUser user) {
+        return UserResponseDTO.from(user);
     }
 }
