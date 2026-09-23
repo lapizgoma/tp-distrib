@@ -86,4 +86,33 @@ public class Work {
         work.availability = availability;
         return work;
     }
+
+    /**
+     * Reemplaza todos los datos mutables de la obra.
+     *
+     * @param title        nuevo título.
+     * @param artist       nuevo artista autor.
+     * @param imageUrl     nueva URL de la imagen.
+     * @param creationYear nuevo año de creación.
+     * @param technique    nueva técnica.
+     * @param dimensions   nuevas dimensiones.
+     * @param era          nueva época.
+     * @param description  nueva descripción.
+     * @param location     nueva ubicación.
+     * @param availability nueva disponibilidad.
+     */
+    public void update(String title, Artist artist, String imageUrl, Integer creationYear,
+                       String technique, String dimensions, String era, String description,
+                       String location, WorkAvailability availability) {
+        this.title = title;
+        this.artist = artist;
+        this.imageUrl = imageUrl;
+        this.creationYear = creationYear;
+        this.technique = technique;
+        this.dimensions = dimensions;
+        this.era = era;
+        this.description = description;
+        this.location = location;
+        this.availability = availability;
+    }
 }

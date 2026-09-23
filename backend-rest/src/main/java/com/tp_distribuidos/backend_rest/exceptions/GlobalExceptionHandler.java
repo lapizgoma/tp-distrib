@@ -44,6 +44,29 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Maneja la búsqueda de una obra inexistente.
+     *
+     * @param ex excepción lanzada por la capa de servicio.
+     * @return un {@link ProblemDetail} con estado {@code 404 Not Found}.
+     */
+    @ExceptionHandler(WorkNotFoundException.class)
+    public ProblemDetail handleWorkNotFound(WorkNotFoundException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    /**
+     * Maneja la referencia a un artista inexistente al crear o actualizar una
+     * obra.
+     *
+     * @param ex excepción lanzada por la capa de servicio.
+     * @return un {@link ProblemDetail} con estado {@code 404 Not Found}.
+     */
+    @ExceptionHandler(ArtistNotFoundException.class)
+    public ProblemDetail handleArtistNotFound(ArtistNotFoundException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    /**
      * Maneja las credenciales inválidas durante el login.
      *
      * <p>Devuelve un mensaje genérico para no revelar si el email existe o no en
