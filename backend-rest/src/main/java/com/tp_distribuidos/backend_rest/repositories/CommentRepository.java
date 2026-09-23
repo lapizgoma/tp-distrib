@@ -15,4 +15,6 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
 
     @Query("SELECT c FROM Comment c JOIN FETCH c.user WHERE c.work.id = :workId ORDER BY c.date DESC")
     List<Comment> findByWorkIdOrderByDateDesc(@Param("workId") Long workId);
+
+    void deleteByWorkId(Long workId);
 }

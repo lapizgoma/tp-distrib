@@ -19,4 +19,7 @@ public interface WorkRepository extends JpaRepository<Work, Long> {
 
     @Query("SELECT w FROM Work w JOIN FETCH w.artist WHERE w.id = :id")
     Optional<Work> findByIdWithArtist(@Param("id") Long id);
+
+    @Query("SELECT w FROM Work w JOIN FETCH w.artist")
+    List<Work> findAllWithArtist();
 }
