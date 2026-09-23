@@ -39,7 +39,15 @@ public class OpenApiConfig {
                         .title("Museo Virtual - REST API")
                         .version("v1")
                         .description("API REST del sistema Museo Virtual: autenticación, obras, artistas, "
-                                + "eventos, comentarios e inscripciones.")
+                                + "eventos, comentarios e inscripciones.\n\n"
+                                + "## Usuarios precargados (data.sql)\n\n"
+                                + "| Rol | Email | Contraseña |\n"
+                                + "| --- | --- | --- |\n"
+                                + "| ADMINISTRADOR | admin@museo.com | `admin123` |\n"
+                                + "| CURADOR | curador@museo.com | `curador123` |\n"
+                                + "| VISITANTE | visitante@museo.com | `visitante123` |\n\n"
+                                + "Para los endpoints protegidos, iniciá sesión en "
+                                + "`POST /api/rest/auth/login` y enviá el token como `Bearer`.")
                         .contact(new Contact()
                                 .name("Equipo Museo Virtual")
                                 .email("equipo@museo.com")));

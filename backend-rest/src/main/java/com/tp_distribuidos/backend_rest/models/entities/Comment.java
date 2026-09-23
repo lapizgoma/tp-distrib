@@ -55,4 +55,10 @@ public class Comment {
         comment.date = date;
         return comment;
     }
+
+    public void updateText(String newText) {
+        this.text = newText;
+        this.date = java.time.LocalDateTime.now();
+    }
+
 }
