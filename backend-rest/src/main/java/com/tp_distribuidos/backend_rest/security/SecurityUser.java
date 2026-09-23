@@ -63,4 +63,12 @@ public class SecurityUser implements UserDetails {
     public UserRole getRole() {
         return user.getRole();
     }
+
+    public String getFirstName() {
+        return user.getFirstName();
+    }
+
+    public String getLastName() {
+        return user.getLastName();
+    }
 }
