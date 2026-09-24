@@ -1,22 +1,30 @@
 -- ============================================================
 -- Museo Virtual - Datos por defecto
--- Usuarios iniciales para autenticación (Spring Security),
--- artistas y obras de ejemplo para desarrollo/demo.
+-- Usuarios, artistas, obras, eventos y comentarios de ejemplo
+-- para autenticación (Spring Security) y desarrollo/demo.
 --
 -- Idempotente: se ejecuta en cada arranque
 -- (spring.sql.init.mode=always). Los usuarios dependen del
--- UNIQUE de users.email; artistas y obras usan IDs fijos y
--- INSERT IGNORE sobre la clave primaria.
+-- UNIQUE de users.email; artistas, obras, eventos y comentarios
+-- usan IDs fijos e INSERT IGNORE sobre la clave primaria.
 --
--- NOTA: si la base ya tiene artistas/obras creados por el CRUD
--- con esos IDs, el INSERT IGNORE los salteará. Para un seed
--- limpio conviene resetear el volumen: docker compose down -v
+-- NOTA: si la base ya tiene filas creadas por el CRUD con esos
+-- IDs, el INSERT IGNORE las salteará. Para un seed limpio
+-- conviene resetear el volumen: docker compose down -v
 -- ============================================================
 
 INSERT IGNORE INTO users (email, password, role, first_name, last_name) VALUES
     ('admin@museo.com',     '$2a$10$aC.44NUVhz8EwSgMwPmdIeIHiIx2bhRitCTIleqVXRdBEM7fLtPJy', 'ADMINISTRADOR', 'Admin',     'Sistema'),
     ('curador@museo.com',   '$2a$10$wyWKgq9/Jz9jOn3CmDyuu.fbirsX1KZGyP4ShWyFZV2Gr3ey4N9Re', 'CURADOR',       'Curador',   'Sistema'),
+    ('curador2@museo.com',  '$2a$10$wyWKgq9/Jz9jOn3CmDyuu.fbirsX1KZGyP4ShWyFZV2Gr3ey4N9Re', 'CURADOR',       'Marta',     'Ruiz'),
     ('visitante@museo.com', '$2a$10$BN/H9EYLP2SqfimEQRRtaOHw4bom6KVyi8Yv6txIidksgZXIrLi26', 'VISITANTE',     'Visitante', 'Sistema');
+
+-- IDs de usuario resueltos por email: users no usa IDs fijos, así que las
+-- tablas que referencian usuarios lo hacen vía variables de sesión.
+SET @adminId     := (SELECT id FROM users WHERE email = 'admin@museo.com');
+SET @curadorId   := (SELECT id FROM users WHERE email = 'curador@museo.com');
+SET @curador2Id  := (SELECT id FROM users WHERE email = 'curador2@museo.com');
+SET @visitanteId := (SELECT id FROM users WHERE email = 'visitante@museo.com');
 
 INSERT IGNORE INTO artists (id, name, biography) VALUES
     (1, 'Vincent van Gogh',  'Pintor neerlandés y una de las figuras más influyentes del postimpresionismo, conocido por su uso expresivo del color y sus pinceladas gestuales.'),
@@ -44,3 +52,28 @@ INSERT IGNORE INTO works (id, title, artist_id, image_url, creation_year, techni
     (13, 'La persistencia de la memoria', 8, 'https://placehold.co/600x400?text=La+persistencia+de+la+memoria', 1931, 'Óleo sobre lienzo', '24 x 33 cm', 'Surrealismo', 'Escena onírica de relojes derretidos sobre un paisaje costero, una de las imágenes más icónicas del surrealismo.', 'Sala 3 - Vanguardias', 'EN_EXHIBICION'),
     (14, 'Terraza de café por la noche', 1, 'https://placehold.co/600x400?text=Terraza+de+cafe+por+la+noche', 1888, 'Óleo sobre lienzo', '80,7 x 65,3 cm', 'Posimpresionismo', 'Vista nocturna de una terraza en Arlés con colores intensos y contrastados, donde Van Gogh prescindió deliberadamente del uso del negro.', 'Sala 4 - Arte Moderno', 'EN_EXHIBICION'),
     (15, 'El puente japonés', 2, 'https://placehold.co/600x400?text=El+puente+japones', 1899, 'Óleo sobre lienzo', '89,2 x 93,3 cm', 'Impresionismo', 'Escena del jardín acuático de Giverny con un puente de madera inspirado en los grabados japoneses que coleccionaba el artista.', 'Depósito', 'EN_DEPOSITO');
+
+-- Eventos: mix de los 4 tipos, ambos curadores y fechas pasadas y futuras.
+-- Las fechas son relativas al arranque para mantenerse vigentes.
+INSERT IGNORE INTO events (id, title, description, datetime, duration, lead_curator_id, maximum_capacity, event_type) VALUES
+    (1,  'Visita guiada por Grandes Maestros', 'Recorrido guiado por las obras maestras del Renacimiento y el Barroco.',            DATE_ADD(NOW(), INTERVAL 7 DAY),  60,  @curadorId,  25,  'VISITA_GUIADA'),
+    (2,  'Visita guiada nocturna',             'Recorrido nocturno con música en vivo por las salas de arte moderno.',                DATE_ADD(NOW(), INTERVAL 21 DAY), 60,  @curadorId,  20,  'VISITA_GUIADA'),
+    (3,  'Taller de pintura impresionista',    'Taller práctico para experimentar con pinceladas sueltas y luz natural.',             DATE_ADD(NOW(), INTERVAL 14 DAY), 120, @curadorId,  15,  'TALLER'),
+    (4,  'Taller de autorretrato',             'Taller introductorio al autorretrato inspirado en la obra de Frida Kahlo.',           DATE_SUB(NOW(), INTERVAL 20 DAY), 120, @curador2Id, 15,  'TALLER'),
+    (5,  'Charla: el Guernica',                'Análisis del contexto histórico y la composición del mural de Picasso.',              DATE_ADD(NOW(), INTERVAL 10 DAY), 90,  @curador2Id, 100, 'CHARLA'),
+    (6,  'Charla: vanguardias del siglo XX',   'Panorama de los movimientos de vanguardia y su ruptura con la tradición.',            DATE_SUB(NOW(), INTERVAL 45 DAY), 90,  @curadorId,  80,  'CHARLA'),
+    (7,  'Exposición temporal: Surrealismo',   'Muestra temporaria con obras oníricas del surrealismo europeo y latinoamericano.',    DATE_ADD(NOW(), INTERVAL 30 DAY), 180, @curador2Id, 200, 'EXPOSICION'),
+    (8,  'Exposición: Impresionismo',          'Recorrido por la luz y el color de los maestros impresionistas.',                     DATE_SUB(NOW(), INTERVAL 8 DAY),  180, @curador2Id, 150, 'EXPOSICION'),
+    (9,  'Visita guiada familiar',             'Recorrido pensado para toda la familia con actividades para chicos.',                 DATE_SUB(NOW(), INTERVAL 3 DAY),  45,  @curador2Id, 30,  'VISITA_GUIADA'),
+    (10, 'Taller de cerámica',                 'Taller de modelado en arcilla inspirado en piezas de la colección.',                  DATE_ADD(NOW(), INTERVAL 40 DAY), 150, @curador2Id, 12,  'TALLER');
+
+-- Comentarios de ejemplo sobre obras con ID fijo. La obra 15 queda sin
+-- comentarios para probar el caso de lista vacía.
+INSERT IGNORE INTO comments (id, user_id, work_id, text, date) VALUES
+    (1, @visitanteId, 1,  'Una de mis obras favoritas: el cielo parece moverse solo.',                       DATE_SUB(NOW(), INTERVAL 3 DAY)),
+    (2, @curadorId,   1,  'El azul cobalto y el amarillo complementario dominan la composición.',             DATE_SUB(NOW(), INTERVAL 1 DAY)),
+    (3, @visitanteId, 4,  'Nunca había notado los reflejos del agua hasta verla en persona.',                 DATE_SUB(NOW(), INTERVAL 10 DAY)),
+    (4, @adminId,     4,  'Excelente pieza del período de Giverny.',                                          DATE_SUB(NOW(), INTERVAL 2 DAY)),
+    (5, @visitanteId, 6,  'La mirada de la Mona Lisa parece seguirte desde cualquier ángulo.',                DATE_SUB(NOW(), INTERVAL 30 DAY)),
+    (6, @curadorId,   10, 'Impresiona el tamaño real del Guernica en la sala.',                               DATE_SUB(NOW(), INTERVAL 5 DAY)),
+    (7, @adminId,     13, 'Los relojes derretidos son puro surrealismo.',                                     DATE_SUB(NOW(), INTERVAL 1 DAY));
