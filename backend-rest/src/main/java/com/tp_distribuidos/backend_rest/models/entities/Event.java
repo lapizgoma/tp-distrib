@@ -79,4 +79,16 @@ public class Event {
         event.duration = duration;
         return event;
     }
+
+    public void update(String title, String description, LocalDateTime datetime,
+                Integer duration, User leadCurator, Integer maximumCapacity, EventType eventType) {
+        this.title = title;
+        this.description = description;
+        this.datetime = datetime;
+        this.duration = duration;
+        this.leadCurator = leadCurator;
+        this.maximumCapacity = maximumCapacity;
+        this.eventType = eventType;
+    }
+
 }
