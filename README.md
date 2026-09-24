@@ -11,12 +11,12 @@ Sigue estos pasos para ejecutar el proyecto de manera local:
 
 ### Pasos
 
-1. **Clonar el repositorio**
+#### 1. **Clonar el repositorio**
 ```bash
    git clone https://github.com/lapizgoma/tp-distrib.git
 ```
 
-2.1.  Levantar el front end
+2.1. Levantar el front end
 
    2.1.1. **Ir a la carpeta del front desde la principal**
    ```bash
@@ -38,7 +38,7 @@ Sigue estos pasos para ejecutar el proyecto de manera local:
    2.1.4 **Acceder a la aplicación**
    en tu navegador en http://localhost:5173.
 
-2.2 Levantar el sevidor de go
+#### 2.2 **Levantar el sevidor de go**
 
    2.2.1 **Instalar go en su equipo**
    Link: https://go.dev/doc/install 
@@ -52,5 +52,5 @@ Sigue estos pasos para ejecutar el proyecto de manera local:
 ### Referencias
 
 #### Go
-1. Introducción a Go y GraphQL https://www.youtube.com/watch?v=cTKX3Nttq28&t=326s
+1. Introducción a Go y GraphQL:https://www.youtube.com/watch?v=cTKX3Nttq28&t=326s
 2. Introducción a Go y VSCode
