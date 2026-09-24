@@ -78,6 +78,8 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/rest/works/**")
                         .permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/rest/events/**")
+                        .permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(restAuthenticationEntryPoint)
