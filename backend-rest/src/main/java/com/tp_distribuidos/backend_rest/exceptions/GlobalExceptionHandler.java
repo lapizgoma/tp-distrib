@@ -104,4 +104,26 @@ public class GlobalExceptionHandler {
 
         return problemDetail;
     }
+    /**
+     * Maneja errores en las reglas de negocio de inscripciones a eventos
+     * (cupo lleno o usuario ya inscripto).
+     *
+     * @param ex excepción lanzada por la capa de servicio.
+     * @return un {@link ProblemDetail} con estado {@code 400 Bad Request}.
+     */
+    @ExceptionHandler(EventRegistrationException.class)
+    public ProblemDetail handleEventRegistrationException(EventRegistrationException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    /**
+     * Maneja la búsqueda de recursos inexistentes (eventos, usuarios, etc.).
+     *
+     * @param ex excepción lanzada al no encontrar la entidad solicitada.
+     * @return un {@link ProblemDetail} con estado {@code 404 Not Found}.
+     */
+    @ExceptionHandler(jakarta.persistence.EntityNotFoundException.class)
+    public ProblemDetail handleEntityNotFound(jakarta.persistence.EntityNotFoundException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
 }
