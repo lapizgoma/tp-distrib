@@ -1,6 +1,7 @@
 package com.tp_distribuidos.backend_rest.services;
 
 import com.tp_distribuidos.backend_rest.dtos.WorkDetailDTO;
+import com.tp_distribuidos.backend_rest.dtos.WorkFiltersDTO;
 import com.tp_distribuidos.backend_rest.dtos.WorkRequestDTO;
 import com.tp_distribuidos.backend_rest.dtos.WorkSummaryDTO;
 import com.tp_distribuidos.backend_rest.exceptions.ArtistNotFoundException;
@@ -30,6 +31,11 @@ public class WorkService {
                 .stream()
                 .map(WorkSummaryDTO::fromEntity)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public WorkFiltersDTO getFilterOptions() {
+        return WorkFiltersDTO.fromEnums();
     }
 
     @Transactional(readOnly = true)
