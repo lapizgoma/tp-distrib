@@ -1,6 +1,7 @@
 package com.tp_distribuidos.backend_rest.repositories;
 
 import com.tp_distribuidos.backend_rest.enums.WorkAvailability;
+import com.tp_distribuidos.backend_rest.enums.WorkEra;
 import com.tp_distribuidos.backend_rest.models.entities.Work;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -13,7 +14,7 @@ public interface WorkRepository extends JpaRepository<Work, Long> {
 
     List<Work> findByArtistId(Long artistId);
 
-    List<Work> findByEra(String era);
+    List<Work> findByEra(WorkEra era);
 
     List<Work> findByAvailability(WorkAvailability availability);
 

@@ -1,6 +1,9 @@
 package com.tp_distribuidos.backend_rest.models.entities;
 
 import com.tp_distribuidos.backend_rest.enums.WorkAvailability;
+import com.tp_distribuidos.backend_rest.enums.WorkEra;
+import com.tp_distribuidos.backend_rest.enums.WorkLocation;
+import com.tp_distribuidos.backend_rest.enums.WorkTechnique;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -48,20 +51,23 @@ public class Work {
     @Column(name = "creation_year")
     private Integer creationYear;
 
+    @Enumerated(EnumType.STRING)
     @Column(length = 100)
-    private String technique;
+    private WorkTechnique technique;
 
     @Column(length = 100)
     private String dimensions;
 
+    @Enumerated(EnumType.STRING)
     @Column(length = 100)
-    private String era;
+    private WorkEra era;
 
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Enumerated(EnumType.STRING)
     @Column(length = 255)
-    private String location;
+    private WorkLocation location;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -71,8 +77,8 @@ public class Work {
     private List<Comment> comments = new ArrayList<>();
 
     public static Work of(String title, Artist artist, String imageUrl, Integer creationYear,
-                          String technique, String dimensions, String era, String description,
-                          String location, WorkAvailability availability) {
+                          WorkTechnique technique, String dimensions, WorkEra era, String description,
+                          WorkLocation location, WorkAvailability availability) {
         Work work = new Work();
         work.title = title;
         work.artist = artist;
@@ -102,8 +108,8 @@ public class Work {
      * @param availability nueva disponibilidad.
      */
     public void update(String title, Artist artist, String imageUrl, Integer creationYear,
-                       String technique, String dimensions, String era, String description,
-                       String location, WorkAvailability availability) {
+                       WorkTechnique technique, String dimensions, WorkEra era, String description,
+                       WorkLocation location, WorkAvailability availability) {
         this.title = title;
         this.artist = artist;
         this.imageUrl = imageUrl;
