@@ -1,6 +1,9 @@
 package com.tp_distribuidos.backend_rest.dtos;
 
 import com.tp_distribuidos.backend_rest.enums.WorkAvailability;
+import com.tp_distribuidos.backend_rest.enums.WorkEra;
+import com.tp_distribuidos.backend_rest.enums.WorkLocation;
+import com.tp_distribuidos.backend_rest.enums.WorkTechnique;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -33,24 +36,21 @@ public record WorkRequestDTO(
         @Positive(message = "El año de creación debe ser positivo")
         Integer creationYear,
 
-        @Schema(description = "Técnica utilizada.", example = "Óleo sobre lienzo")
-        @Size(max = 100, message = "La técnica no puede superar los 100 caracteres")
-        String technique,
+        @Schema(description = "Técnica utilizada.", example = "OLEO")
+        WorkTechnique technique,
 
         @Schema(description = "Dimensiones de la obra.", example = "73.7 cm × 92.1 cm")
         @Size(max = 100, message = "Las dimensiones no pueden superar los 100 caracteres")
         String dimensions,
 
-        @Schema(description = "Época o período artístico.", example = "Posimpresionismo")
-        @Size(max = 100, message = "La época no puede superar los 100 caracteres")
-        String era,
+        @Schema(description = "Época o período artístico.", example = "IMPRESIONISMO")
+        WorkEra era,
 
         @Schema(description = "Descripción de la obra.", example = "Representa la vista nocturna...")
         String description,
 
-        @Schema(description = "Ubicación en el museo.", example = "Sala 4 - Arte Moderno")
-        @Size(max = 255, message = "La ubicación no puede superar los 255 caracteres")
-        String location,
+        @Schema(description = "Ubicación en el museo.", example = "SALA_4_ARTE_MODERNO")
+        WorkLocation location,
 
         @Schema(description = "Disponibilidad de la obra.", example = "EN_EXHIBICION",
                 requiredMode = Schema.RequiredMode.REQUIRED)

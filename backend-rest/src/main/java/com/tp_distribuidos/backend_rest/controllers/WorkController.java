@@ -1,6 +1,7 @@
 package com.tp_distribuidos.backend_rest.controllers;
 
 import com.tp_distribuidos.backend_rest.dtos.WorkDetailDTO;
+import com.tp_distribuidos.backend_rest.dtos.WorkFiltersDTO;
 import com.tp_distribuidos.backend_rest.dtos.WorkRequestDTO;
 import com.tp_distribuidos.backend_rest.dtos.WorkSummaryDTO;
 import com.tp_distribuidos.backend_rest.services.WorkService;
@@ -41,6 +42,16 @@ public class WorkController {
     })
     public ResponseEntity<List<WorkSummaryDTO>> getAllWorks() {
         return ResponseEntity.ok(workService.getAllWorks());
+    }
+
+    @GetMapping("/filters")
+    @Operation(summary = "Listar valores de filtro",
+            description = "Retorna los valores válidos de era, técnica y ubicación para poblar los filtros del front.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Valores recuperados exitosamente")
+    })
+    public ResponseEntity<WorkFiltersDTO> getWorkFilters() {
+        return ResponseEntity.ok(workService.getFilterOptions());
     }
 
     @GetMapping("/{id}")

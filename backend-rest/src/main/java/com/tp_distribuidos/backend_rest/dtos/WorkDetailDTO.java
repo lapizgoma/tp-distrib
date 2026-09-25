@@ -1,6 +1,9 @@
 package com.tp_distribuidos.backend_rest.dtos;
 
 import com.tp_distribuidos.backend_rest.enums.WorkAvailability;
+import com.tp_distribuidos.backend_rest.enums.WorkEra;
+import com.tp_distribuidos.backend_rest.enums.WorkLocation;
+import com.tp_distribuidos.backend_rest.enums.WorkTechnique;
 import com.tp_distribuidos.backend_rest.models.entities.Work;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
@@ -23,20 +26,20 @@ public class WorkDetailDTO {
     @Schema(description = "Año de creación", example = "1889")
     private Integer creationYear;
 
-    @Schema(description = "Técnica utilizada", example = "Óleo sobre lienzo")
-    private String technique;
+    @Schema(description = "Técnica utilizada", example = "OLEO")
+    private WorkTechnique technique;
 
     @Schema(description = "Dimensiones de la obra", example = "73.7 cm × 92.1 cm")
     private String dimensions;
 
-    @Schema(description = "Época o período artístico", example = "Posimpresionismo")
-    private String era;
+    @Schema(description = "Época o período artístico", example = "IMPRESIONISMO")
+    private WorkEra era;
 
     @Schema(description = "Descripción de la obra", example = "Representa la vista nocturna...")
     private String description;
 
-    @Schema(description = "Ubicación en el museo", example = "Sala 4 - Arte Moderno")
-    private String location;
+    @Schema(description = "Ubicación en el museo", example = "SALA_4_ARTE_MODERNO")
+    private WorkLocation location;
 
     @Schema(description = "Disponibilidad de la obra", example = "EN_EXHIBICION")
     private WorkAvailability availability;
