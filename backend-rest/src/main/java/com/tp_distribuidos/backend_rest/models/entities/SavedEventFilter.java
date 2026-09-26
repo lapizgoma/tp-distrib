@@ -59,4 +59,10 @@ public class SavedEventFilter {
         filter.filterConfig = filterConfig;
         return filter;
     }
+
+    public void update(String name, String description, EventFilterConfigDTO filterConfig) {
+        this.name = name;
+        this.description = description;
+        this.filterConfig = filterConfig;
+    }
 }
