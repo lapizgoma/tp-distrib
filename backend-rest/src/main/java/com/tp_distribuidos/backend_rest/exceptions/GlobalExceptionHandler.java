@@ -126,4 +126,16 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleEntityNotFound(jakarta.persistence.EntityNotFoundException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
     }
+
+    @ExceptionHandler(SavedEventFilterNotFoundException.class)
+    public ProblemDetail handleSavedEventFilterNotFound(SavedEventFilterNotFoundException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ProblemDetail handleDataIntegrityViolation(org.springframework.dao.DataIntegrityViolationException ex) {
+        return ProblemDetail.forStatusAndDetail(
+                HttpStatus.CONFLICT,
+                "Ya tienes un filtro guardado con ese nombre o los datos entran en conflicto.");
+    }
 }
