@@ -1,12 +1,13 @@
 -- ============================================================
 -- Museo Virtual - Datos por defecto
--- Usuarios, artistas, obras, eventos y comentarios de ejemplo
--- para autenticación (Spring Security) y desarrollo/demo.
+-- Usuarios, artistas, obras, eventos, inscripciones y comentarios
+-- de ejemplo para autenticación (Spring Security) y desarrollo/demo.
 --
 -- Idempotente: se ejecuta en cada arranque
 -- (spring.sql.init.mode=always). Los usuarios dependen del
 -- UNIQUE de users.email; artistas, obras, eventos y comentarios
--- usan IDs fijos e INSERT IGNORE sobre la clave primaria.
+-- usan IDs fijos e INSERT IGNORE sobre la clave primaria. Las
+-- inscripciones usan INSERT IGNORE sobre la PK (event_id, user_id).
 --
 -- NOTA: si la base ya tiene filas creadas por el CRUD con esos
 -- IDs, el INSERT IGNORE las salteará. Para un seed limpio
@@ -66,6 +67,49 @@ INSERT IGNORE INTO events (id, title, description, datetime, duration, lead_cura
     (8,  'Exposición: Impresionismo',          'Recorrido por la luz y el color de los maestros impresionistas.',                     DATE_SUB(NOW(), INTERVAL 8 DAY),  180, @curador2Id, 150, 'EXPOSICION'),
     (9,  'Visita guiada familiar',             'Recorrido pensado para toda la familia con actividades para chicos.',                 DATE_SUB(NOW(), INTERVAL 3 DAY),  45,  @curador2Id, 30,  'VISITA_GUIADA'),
     (10, 'Taller de cerámica',                 'Taller de modelado en arcilla inspirado en piezas de la colección.',                  DATE_ADD(NOW(), INTERVAL 40 DAY), 150, @curador2Id, 12,  'TALLER');
+
+-- Visitantes demo para poblar inscripciones. Comparten la misma contraseña
+-- que 'visitante@museo.com' ('visitante123') para poder autenticarse en pruebas.
+INSERT IGNORE INTO users (email, password, role, first_name, last_name)
+SELECT CONCAT('visitante', LPAD(n, 2, '0'), '@museo.com'),
+       '$2a$10$BN/H9EYLP2SqfimEQRRtaOHw4bom6KVyi8Yv6txIidksgZXIrLi26',
+       'VISITANTE',
+       CONCAT('Visitante ', n),
+       CONCAT('Demo ', n)
+FROM (
+    SELECT ones.n + tens.n * 10 AS n
+    FROM (SELECT 0 AS n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4
+          UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) ones
+    CROSS JOIN (SELECT 0 AS n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3) tens
+) numbers
+WHERE n BETWEEN 1 AND 30;
+
+-- Inscripciones demo con ocupaciones variadas (0%, baja, media y 100%) para
+-- ejercitar el informe de asistencia en Excel. La cantidad de inscriptos por
+-- evento se define en el CASE; los eventos creados por el CRUD (id fuera de
+-- 1..10) no se seedean. registered_at no interviene en el reporte, por lo que
+-- solo se completa con un valor aproximado.
+INSERT IGNORE INTO events_registrations (event_id, user_id, registered_at)
+SELECT e.id,
+       u.id,
+       DATE_SUB(NOW(), INTERVAL (u.rn % 40 + 1) DAY)
+FROM events e
+JOIN (
+    SELECT id, ROW_NUMBER() OVER (ORDER BY id) AS rn
+    FROM users
+    WHERE role = 'VISITANTE'
+) u ON u.rn <= CASE e.id
+    WHEN 1  THEN 20 -- 80% de 25 (visita, futuro)
+    WHEN 2  THEN 20 -- 100% de 20 (visita, futuro)
+    WHEN 3  THEN 7  -- 47% de 15 (taller, futuro)
+    WHEN 4  THEN 15 -- 100% de 15 (taller, pasado)
+    WHEN 5  THEN 30 -- 30% de 100 (charla, futuro)
+    WHEN 6  THEN 0  -- sin inscriptos (charla, pasado)
+    WHEN 7  THEN 15 -- 7,5% de 200 (exposición, futuro)
+    WHEN 8  THEN 12 -- 8% de 150 (exposición, pasado)
+    WHEN 9  THEN 30 -- 100% de 30 (visita, pasado)
+    WHEN 10 THEN 3  -- 25% de 12 (taller, futuro)
+END;
 
 -- Comentarios de ejemplo sobre obras con ID fijo. La obra 15 queda sin
 -- comentarios para probar el caso de lista vacía.
