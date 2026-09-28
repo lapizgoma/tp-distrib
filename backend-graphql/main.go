@@ -9,33 +9,22 @@ import (
 )
 
 func main() {
-	rootQuery := graphql.NewObject(graphql.ObjectConfig{
-		Name: "RootQuery",
-		Fields: graphql.Fields{
-			"saludo": &graphql.Field{
-				Type: graphql.String,
-				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-					return "Servicio GraphQL activo en :8082", nil
-				},
-			},
-		},
-	})
-
 	schema, err := graphql.NewSchema(graphql.SchemaConfig{
 		Query: rootQuery,
 	})
+
 	if err != nil {
 		log.Fatalf("Error al crear esquema: %v", err)
 	}
 
-	h := handler.New(&handler.Config{
+	reportHandler := handler.New(&handler.Config{
 		Schema:   &schema,
 		Pretty:   true,
 		GraphiQL: true,
 	})
 
-	http.Handle("/graphql", h)
+	http.Handle("/graphql/report", reportHandler)
 
-	log.Println("Servidor GraphQL corriendo en http://localhost:8082/graphql")
+	log.Println("INFO: Servidor GraphQL corriendo en http://localhost:8082/graphql")
 	log.Fatal(http.ListenAndServe(":8082", nil))
 }
