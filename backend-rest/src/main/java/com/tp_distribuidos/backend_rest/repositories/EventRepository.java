@@ -22,4 +22,7 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
 
     @Query("SELECT e FROM Event e JOIN FETCH e.leadCurator WHERE e.id = :id")
     Optional<Event> findByIdWithCurator(@Param("id") Long id);
+
+    @Query("SELECT e FROM Event e JOIN FETCH e.leadCurator ORDER BY e.datetime ASC")
+    List<Event> findAllWithCurator();
 }
