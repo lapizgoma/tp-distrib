@@ -55,7 +55,8 @@ INSERT IGNORE INTO works (id, title, artist_id, image_url, creation_year, techni
     (15, 'El puente japonés', 2, 'https://placehold.co/600x400?text=El+puente+japones', 1899, 'OLEO', '89,2 x 93,3 cm', 'IMPRESIONISMO', 'Escena del jardín acuático de Giverny con un puente de madera inspirado en los grabados japoneses que coleccionaba el artista.', 'DEPOSITO', 'EN_DEPOSITO');
 
 -- Eventos: mix de los 4 tipos, ambos curadores y fechas pasadas y futuras.
--- Las fechas son relativas al arranque para mantenerse vigentes.
+-- Las fechas son relativas al primer seed: con INSERT IGNORE, los arranques
+-- posteriores conservan las filas existentes y las fechas envejecen.
 INSERT IGNORE INTO events (id, title, description, datetime, duration, lead_curator_id, maximum_capacity, event_type) VALUES
     (1,  'Visita guiada por Grandes Maestros', 'Recorrido guiado por las obras maestras del Renacimiento y el Barroco.',            DATE_ADD(NOW(), INTERVAL 7 DAY),  60,  @curadorId,  25,  'VISITA_GUIADA'),
     (2,  'Visita guiada nocturna',             'Recorrido nocturno con música en vivo por las salas de arte moderno.',                DATE_ADD(NOW(), INTERVAL 21 DAY), 60,  @curadorId,  20,  'VISITA_GUIADA'),
