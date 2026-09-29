@@ -18,18 +18,38 @@ import (
  */
 var statusEnum = graphql.NewEnum(graphql.EnumConfig{
 	Name: "EventStatus",
+	Description: "Estado temporal de un evento respecto al momento actual, usado para " +
+		"filtrar el informe de asistencia.",
 	Values: graphql.EnumValueConfigMap{
-		"ENDED":    {Value: "ended"},
-		"UPCOMING": {Value: "upcoming"},
-		"ALL":      {Value: "all"},
+		"ENDED": {
+			Value:       "ended",
+			Description: "Eventos cuyo 'datetime + duration' ya pasó respecto al momento actual.",
+		},
+		"UPCOMING": {
+			Value:       "upcoming",
+			Description: "Eventos cuyo 'datetime' todavía no llegó.",
+		},
+		"ALL": {
+			Value:       "all",
+			Description: "No filtra por estado: incluye tanto eventos finalizados como próximos. Valor por defecto.",
+		},
 	},
 })
 
 var groupByEnum = graphql.NewEnum(graphql.EnumConfig{
 	Name: "GroupBy",
+	Description: "Dimensión por la que se puede agrupar el informe de asistencia. Se puede " +
+		"combinar más de un valor en una misma consulta.",
 	Values: graphql.EnumValueConfigMap{
-		"MONTH": {Value: "month"},
-		"TYPE":  {Value: "type"},
+		"MONTH": {
+			Value: "month",
+			Description: "Agrupa por mes calendario (1 a 12), sin distinguir el año; eventos " +
+				"de distintos años en el mismo mes caen en el mismo grupo.",
+		},
+		"TYPE": {
+			Value:       "type",
+			Description: "Agrupa por 'event_type'.",
+		},
 	},
 })
 
@@ -37,11 +57,21 @@ var groupByEnum = graphql.NewEnum(graphql.EnumConfig{
  * GRAPHQL TYPES
  */
 var eventType = graphql.NewObject(graphql.ObjectConfig{
-	Name: "Event",
+	Name:        "Event",
+	Description: "Un evento individual dentro de un grupo del informe",
 	Fields: graphql.Fields{
-		"id":          &graphql.Field{Type: graphql.String},
-		"name":        &graphql.Field{Type: graphql.String},
-		"registrants": &graphql.Field{Type: graphql.Int},
+		"id": &graphql.Field{
+			Type:        graphql.String,
+			Description: "Identificador único del evento.",
+		},
+		"name": &graphql.Field{
+			Type:        graphql.String,
+			Description: "Título del evento.",
+		},
+		"registrants": &graphql.Field{
+			Type:        graphql.Int,
+			Description: "Cantidad de inscriptos al evento.",
+		},
 	},
 })
 
@@ -52,13 +82,29 @@ type Event struct {
 }
 
 var groupResultType = graphql.NewObject(graphql.ObjectConfig{
-	Name: "GroupResult",
+	Name:        "GroupResult",
+	Description: "Un grupo del informe de asistencia.",
 	Fields: graphql.Fields{
-		"groupName":         &graphql.Field{Type: graphql.NewNonNull(graphql.String)},
-		"eventCount":        &graphql.Field{Type: graphql.NewNonNull(graphql.Int)},
-		"totalRegistrants":  &graphql.Field{Type: graphql.NewNonNull(graphql.Int)},
-		"averageAttendance": &graphql.Field{Type: graphql.NewNonNull(graphql.Float)},
-		"topEvents":         &graphql.Field{Type: graphql.NewNonNull(graphql.NewList(graphql.NewNonNull(eventType)))},
+		"groupName": &graphql.Field{
+			Type:        graphql.NewNonNull(graphql.String),
+			Description: "Etiqueta del grupo: nombre del mes (ej. \"March\") si se agrupó por MONTH.",
+		},
+		"eventCount": &graphql.Field{
+			Type:        graphql.NewNonNull(graphql.Int),
+			Description: "Cantidad de eventos que caen en este grupo, luego de aplicar los filtros de fecha, tipo y estado.",
+		},
+		"totalRegistrants": &graphql.Field{
+			Type:        graphql.NewNonNull(graphql.Int),
+			Description: "Suma de inscriptos acumulados de todos los eventos del grupo.",
+		},
+		"averageAttendance": &graphql.Field{
+			Type:        graphql.NewNonNull(graphql.Float),
+			Description: "Promedio de inscriptos por evento dentro del grupo (total de inscriptos / cantidad de eventos).",
+		},
+		"topEvents": &graphql.Field{
+			Type:        graphql.NewNonNull(graphql.NewList(graphql.NewNonNull(eventType))),
+			Description: "Los eventos más populares del grupo según cantidad de inscriptos, en orden descendente.",
+		},
 	},
 })
 
@@ -73,7 +119,8 @@ type GroupResult struct {
 
 func init() {
 	groupResultType.AddFieldConfig("subGroups", &graphql.Field{
-		Type: graphql.NewList(groupResultType),
+		Type:        graphql.NewList(groupResultType),
+		Description: "Segunda agrupación. 'null' si no hay segunda agrupación.",
 	})
 }
 
@@ -85,15 +132,48 @@ var reportQuery = graphql.NewObject(graphql.ObjectConfig{
 	Fields: graphql.Fields{
 		"attendanceReport": &graphql.Field{
 			Type: graphql.NewList(groupResultType),
+			Description: "Informe de eventos del museo en base a la popularidad por participación de los mismos." +
+				"Restringido a los roles CURADOR y ADMINISTRADOR.",
 			Args: graphql.FieldConfigArgument{
-				"startDate": &graphql.ArgumentConfig{Type: graphql.String},
-				"endDate":   &graphql.ArgumentConfig{Type: graphql.String},
-				"type":      &graphql.ArgumentConfig{Type: graphql.String},
-				"status":    &graphql.ArgumentConfig{Type: statusEnum, DefaultValue: "all"},
+				"startDate": &graphql.ArgumentConfig{
+					Type: graphql.String,
+					Description: "Fecha de inicio del rango a consultar, en formato YYYY-MM-DD " +
+						"(ej. \"2026-01-31\"). Es inclusiva: se incluyen los eventos con " +
+						"'datetime' igual o posterior a esta fecha. Si se omite, no hay límite inferior.",
+				},
+				"endDate": &graphql.ArgumentConfig{
+					Type: graphql.String,
+					Description: "Fecha de fin del rango a consultar, en formato YYYY-MM-DD " +
+						"(ej. \"2026-02-28\"). Es exclusiva: se incluyen los eventos con " +
+						"'datetime' estrictamente anterior a esta fecha. Si se omite, no hay límite superior.",
+				},
+				"type": &graphql.ArgumentConfig{
+					Type: graphql.String,
+					Description: "Filtra por un tipo de evento específico (ej. \"Visita Guiada\", " +
+						"\"Taller\"). Si se omite, se incluyen todos los tipos. No tiene efecto sobre el criterio de agrupación.",
+				},
+				"status": &graphql.ArgumentConfig{
+					Type: statusEnum,
+					Description: "Filtra los eventos según si ya ocurrieron (ENDED), están por " +
+						"ocurrir (UPCOMING), o no se filtra por estado (ALL, valor por defecto). " +
+						"Un evento se considera pasado cuando 'datetime + duration' es anterior " +
+						"al momento actual.",
+					DefaultValue: "all",
+				},
 				"groupBy": &graphql.ArgumentConfig{
 					Type: graphql.NewNonNull(graphql.NewList(graphql.NewNonNull(groupByEnum))),
+					Description: "Dimensión o dimensiones por las que agrupar el informe: MONTH " +
+						"(mes calendario, del 1 al 12, sin distinguir año), TYPE (tipo de evento), " +
+						"o ambos. Si se especifican ambos, el resultado se agrupa primero por mes " +
+						"y cada grupo mensual contiene, en 'subGroups', el desglose por tipo dentro de ese mes.",
 				},
-				"topN": &graphql.ArgumentConfig{Type: graphql.Int, DefaultValue: 3},
+				"topN": &graphql.ArgumentConfig{
+					Type: graphql.Int,
+					Description: "Cantidad máxima de eventos a incluir en 'topEvents' dentro de " +
+						"cada grupo, ordenados por cantidad de inscriptos en forma descendente. " +
+						"Valor por defecto: 3.",
+					DefaultValue: 3,
+				},
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 				rows, err := fetchReportDataFromDatabase(p.Context, p.Args)
