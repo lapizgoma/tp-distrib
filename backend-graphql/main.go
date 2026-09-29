@@ -9,8 +9,9 @@ import (
 )
 
 func main() {
+	initDB()
 	schema, err := graphql.NewSchema(graphql.SchemaConfig{
-		Query: rootQuery,
+		Query: reportQuery,
 	})
 
 	if err != nil {
