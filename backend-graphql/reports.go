@@ -161,8 +161,21 @@ type EventRow struct {
 }
 
 func fetchReportDataFromDatabase(ctx context.Context, args map[string]interface{}) ([]EventRow, error) {
+	// NOTA: Fo usa esta fecha para referirse al formato YYYY-MM-DD
+	const dateFormat = "2006-01-02"
 	startDate, _ := args["startDate"].(string)
+	if startDate != "" {
+		if _, err := time.Parse(dateFormat, startDate); err != nil {
+			return nil, fmt.Errorf("'startDate' tiene que tener el formato YYYY-MM-DD: %w", err)
+		}
+	}
+
 	endDate, _ := args["endDate"].(string)
+	if endDate != "" {
+		if _, err := time.Parse(dateFormat, endDate); err != nil {
+			return nil, fmt.Errorf("'endDate' tiene que tener el formato YYYY-MM-DD: %w", err)
+		}
+	}
 	eventType, _ := args["type"].(string)
 	status, _ := args["status"].(string)
 
