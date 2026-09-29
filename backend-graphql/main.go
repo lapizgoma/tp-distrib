@@ -6,9 +6,13 @@ import (
 
 	"github.com/graphql-go/graphql"
 	"github.com/graphql-go/handler"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	if err := godotenv.Load(); err != nil {
+		log.Println("INFO: no se encontró .env, se usan las variables del sistema")
+	}
 	initDB()
 	rootQuery := graphql.NewObject(graphql.ObjectConfig{
 		Name: "RootQuery",
