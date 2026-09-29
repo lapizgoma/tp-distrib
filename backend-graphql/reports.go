@@ -127,80 +127,75 @@ func init() {
 /*
  * GRAPHQL QUERIES
  */
-var reportQuery = graphql.NewObject(graphql.ObjectConfig{
-	Name: "AttendanceReportQuery",
-	Fields: graphql.Fields{
-		"attendanceReport": &graphql.Field{
-			Type: graphql.NewList(groupResultType),
-			Description: "Informe de eventos del museo en base a la popularidad por participación de los mismos." +
-				"Restringido a los roles CURADOR y ADMINISTRADOR.",
-			Args: graphql.FieldConfigArgument{
-				"startDate": &graphql.ArgumentConfig{
-					Type: graphql.String,
-					Description: "Fecha de inicio del rango a consultar, en formato YYYY-MM-DD " +
-						"(ej. \"2026-01-31\"). Es inclusiva: se incluyen los eventos con " +
-						"'datetime' igual o posterior a esta fecha. Si se omite, no hay límite inferior.",
-				},
-				"endDate": &graphql.ArgumentConfig{
-					Type: graphql.String,
-					Description: "Fecha de fin del rango a consultar, en formato YYYY-MM-DD " +
-						"(ej. \"2026-02-28\"). Es exclusiva: se incluyen los eventos con " +
-						"'datetime' estrictamente anterior a esta fecha. Si se omite, no hay límite superior.",
-				},
-				"type": &graphql.ArgumentConfig{
-					Type: graphql.String,
-					Description: "Filtra por un tipo de evento específico (ej. \"Visita Guiada\", " +
-						"\"Taller\"). Si se omite, se incluyen todos los tipos. No tiene efecto sobre el criterio de agrupación.",
-				},
-				"status": &graphql.ArgumentConfig{
-					Type: statusEnum,
-					Description: "Filtra los eventos según si ya ocurrieron (ENDED), están por " +
-						"ocurrir (UPCOMING), o no se filtra por estado (ALL, valor por defecto). " +
-						"Un evento se considera pasado cuando 'datetime + duration' es anterior " +
-						"al momento actual.",
-					DefaultValue: "all",
-				},
-				"groupBy": &graphql.ArgumentConfig{
-					Type: graphql.NewNonNull(graphql.NewList(graphql.NewNonNull(groupByEnum))),
-					Description: "Dimensión o dimensiones por las que agrupar el informe: MONTH " +
-						"(mes calendario, del 1 al 12, sin distinguir año), TYPE (tipo de evento), " +
-						"o ambos. Si se especifican ambos, el resultado se agrupa primero por mes " +
-						"y cada grupo mensual contiene, en 'subGroups', el desglose por tipo dentro de ese mes.",
-				},
-				"topN": &graphql.ArgumentConfig{
-					Type: graphql.Int,
-					Description: "Cantidad máxima de eventos a incluir en 'topEvents' dentro de " +
-						"cada grupo, ordenados por cantidad de inscriptos en forma descendente. " +
-						"Valor por defecto: 3.",
-					DefaultValue: 3,
-				},
-			},
-			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				rows, err := fetchReportDataFromDatabase(p.Context, p.Args)
-				if err != nil {
-					return nil, err
-				}
-
-				var byMonth, byType bool
-				for _, g := range p.Args["groupBy"].([]interface{}) {
-					switch g.(string) {
-					case "month":
-						byMonth = true
-					case "type":
-						byType = true
-					}
-				}
-
-				topN := 3
-				if n, ok := p.Args["topN"].(int); ok {
-					topN = n
-				}
-
-				return buildReport(rows, byMonth, byType, topN), nil
-			},
+var reportField = &graphql.Field{
+	Type: graphql.NewList(groupResultType),
+	Description: "Informe de eventos del museo en base a la popularidad por participación de los mismos." +
+		"Restringido a los roles CURADOR y ADMINISTRADOR.",
+	Args: graphql.FieldConfigArgument{
+		"startDate": &graphql.ArgumentConfig{
+			Type: graphql.String,
+			Description: "Fecha de inicio del rango a consultar, en formato YYYY-MM-DD " +
+				"(ej. \"2026-01-31\"). Es inclusiva: se incluyen los eventos con " +
+				"'datetime' igual o posterior a esta fecha. Si se omite, no hay límite inferior.",
+		},
+		"endDate": &graphql.ArgumentConfig{
+			Type: graphql.String,
+			Description: "Fecha de fin del rango a consultar, en formato YYYY-MM-DD " +
+				"(ej. \"2026-02-28\"). Es exclusiva: se incluyen los eventos con " +
+				"'datetime' estrictamente anterior a esta fecha. Si se omite, no hay límite superior.",
+		},
+		"type": &graphql.ArgumentConfig{
+			Type: graphql.String,
+			Description: "Filtra por un tipo de evento específico (ej. \"Visita Guiada\", " +
+				"\"Taller\"). Si se omite, se incluyen todos los tipos. No tiene efecto sobre el criterio de agrupación.",
+		},
+		"status": &graphql.ArgumentConfig{
+			Type: statusEnum,
+			Description: "Filtra los eventos según si ya ocurrieron (ENDED), están por " +
+				"ocurrir (UPCOMING), o no se filtra por estado (ALL, valor por defecto). " +
+				"Un evento se considera pasado cuando 'datetime + duration' es anterior " +
+				"al momento actual.",
+			DefaultValue: "all",
+		},
+		"groupBy": &graphql.ArgumentConfig{
+			Type: graphql.NewNonNull(graphql.NewList(graphql.NewNonNull(groupByEnum))),
+			Description: "Dimensión o dimensiones por las que agrupar el informe: MONTH " +
+				"(mes calendario, del 1 al 12, sin distinguir año), TYPE (tipo de evento), " +
+				"o ambos. Si se especifican ambos, el resultado se agrupa primero por mes " +
+				"y cada grupo mensual contiene, en 'subGroups', el desglose por tipo dentro de ese mes.",
+		},
+		"topN": &graphql.ArgumentConfig{
+			Type: graphql.Int,
+			Description: "Cantidad máxima de eventos a incluir en 'topEvents' dentro de " +
+				"cada grupo, ordenados por cantidad de inscriptos en forma descendente. " +
+				"Valor por defecto: 3.",
+			DefaultValue: 3,
 		},
 	},
-})
+	Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+		rows, err := fetchReportDataFromDatabase(p.Context, p.Args)
+		if err != nil {
+			return nil, err
+		}
+
+		var byMonth, byType bool
+		for _, g := range p.Args["groupBy"].([]interface{}) {
+			switch g.(string) {
+			case "month":
+				byMonth = true
+			case "type":
+				byType = true
+			}
+		}
+
+		topN := 3
+		if n, ok := p.Args["topN"].(int); ok {
+			topN = n
+		}
+
+		return buildReport(rows, byMonth, byType, topN), nil
+	},
+}
 
 // SQL
 

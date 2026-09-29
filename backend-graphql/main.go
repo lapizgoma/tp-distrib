@@ -18,7 +18,6 @@ func main() {
 		},
 	})
 
-	// 2. Creamos el esquema asignando el rootQuery
 	schema, err := graphql.NewSchema(graphql.SchemaConfig{
 		Query: rootQuery,
 	})
@@ -27,13 +26,13 @@ func main() {
 		log.Fatalf("Error al crear esquema: %v", err)
 	}
 
-	reportHandler := handler.New(&handler.Config{
+	handler := handler.New(&handler.Config{
 		Schema:   &schema,
 		Pretty:   true,
 		GraphiQL: true,
 	})
 
-	http.Handle("/graphql/report", reportHandler)
+	http.Handle("/graphql", handler)
 
 	log.Println("INFO: Servidor GraphQL corriendo en http://localhost:8082/graphql")
 	log.Fatal(http.ListenAndServe(":8082", nil))
