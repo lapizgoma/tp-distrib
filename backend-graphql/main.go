@@ -10,8 +10,17 @@ import (
 
 func main() {
 	initDB()
+	rootQuery := graphql.NewObject(graphql.ObjectConfig{
+		Name: "RootQuery",
+		Fields: graphql.Fields{
+			"works":  worksField,
+			"report": reportField,
+		},
+	})
+
+	// 2. Creamos el esquema asignando el rootQuery
 	schema, err := graphql.NewSchema(graphql.SchemaConfig{
-		Query: reportQuery,
+		Query: rootQuery,
 	})
 
 	if err != nil {
