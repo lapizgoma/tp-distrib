@@ -1,0 +1,163 @@
+# ---------- Sin filtros ----------
+# Esperado: 15 obras (ids 1 a 15)
+query TodasLasObras {
+  works {
+    id
+    title
+    era
+    availability
+    artist { name }
+  }
+}
+
+
+# ---------- Filtros de igualdad ----------
+# Esperado: 7 obras (ids 1, 2, 3, 4, 5, 14, 15)
+query PorEra {
+  works(era: "IMPRESIONISMO") {
+    id
+    title
+    era
+  }
+}
+
+# Esperado: 1 obra (id 7, La última cena, TEMPLE)
+query PorTecnica {
+  works(technique: "TEMPLE") {
+    id
+    title
+    technique
+  }
+}
+
+# Esperado: 4 obras (ids 3, 7, 9, 15)
+query PorUbicacion {
+  works(location: "DEPOSITO") {
+    id
+    title
+    location
+  }
+}
+
+
+# ---------- Filtro por disponibilidad (enum, va SIN comillas) ----------
+# Esperado: 4 obras (ids 3, 7, 9, 15)
+query EnDeposito {
+  works(availability: EN_DEPOSITO) {
+    id
+    title
+    availability
+  }
+}
+
+# Esperado: 11 obras (todas menos 3, 7, 9, 15)
+query EnExhibicion {
+  works(availability: EN_EXHIBICION) {
+    id
+    title
+    availability
+  }
+}
+
+
+# ---------- Keyword (título, descripción o nombre del artista) ----------
+# Esperado: 2 obras (ids 1 y 14, por título)
+query KeywordEnTitulo {
+  works(keyword: "noche") {
+    id
+    title
+  }
+}
+
+# Esperado: 3 obras (ids 4, 5, 15, por nombre del artista)
+query KeywordEnArtista {
+  works(keyword: "monet") {
+    id
+    title
+    artist { name }
+  }
+}
+
+# Esperado: 2 obras (ids 5 y 12, por descripción)
+query KeywordEnDescripcion {
+  works(keyword: "luz") {
+    id
+    title
+    description
+  }
+}
+
+# Esperado: 2 obras (ids 8 y 9, por nombre del artista)
+query KeywordKahlo {
+  works(keyword: "kahlo") {
+    id
+    title
+    artist { name }
+  }
+}
+
+
+# ---------- Filtros combinados (se cumplen todos a la vez) ----------
+# Esperado: 2 obras (ids 3 y 15)
+query EraTecnicaUbicacion {
+  works(era: "IMPRESIONISMO", technique: "OLEO", location: "DEPOSITO") {
+    id
+    title
+  }
+}
+
+# Esperado: 2 obras (ids 4 y 5)
+query KeywordMasDisponibilidad {
+  works(keyword: "monet", availability: EN_EXHIBICION) {
+    id
+    title
+  }
+}
+
+# Esperado: 1 obra (id 3). Sirve para comprobar que el OR del
+# keyword no rompe los otros filtros.
+query KeywordMasEraMasDisponibilidad {
+  works(keyword: "van gogh", era: "IMPRESIONISMO", availability: EN_DEPOSITO) {
+    id
+    title
+    artist { name }
+  }
+}
+
+
+# ---------- Sin resultados ----------
+# Esperado: lista vacía (works: []), no un error
+query SinResultados {
+  works(keyword: "zzzz") {
+    id
+    title
+  }
+}
+
+
+# ---------- Datos anidados completos ----------
+# Esperado: artist completo. comments todavía NO funciona
+# (punto 4): devuelve null hasta que lo implementemos.
+query ObraCompleta {
+  works(keyword: "mona lisa") {
+    id
+    title
+    image_url
+    creation_year
+    technique
+    dimensions
+    era
+    description
+    location
+    availability
+    artist {
+      name
+      biography
+    }
+    comments {
+      user
+      text
+      date
+    }
+  }
+}

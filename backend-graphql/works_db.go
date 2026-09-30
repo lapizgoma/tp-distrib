@@ -38,6 +38,15 @@ func fetchWorks(ctx context.Context, args map[string]interface{}) ([]Work, error
 		query += " AND w.location = ?"
 		queryArgs = append(queryArgs, location)
 	}
+	if availability, ok := args["availability"].(string); ok {
+		query += " AND w.availability = ?"
+		queryArgs = append(queryArgs, availability)
+	}
+	if keyword, ok := args["keyword"].(string); ok {
+		query += " AND (w.title LIKE ? OR w.description LIKE ? OR a.name LIKE ?)"
+		pattern := "%" + keyword + "%"
+		queryArgs = append(queryArgs, pattern, pattern, pattern)
+	}
 
 	query += " ORDER BY w.id"
 
