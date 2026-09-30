@@ -4,12 +4,16 @@ import com.tp_distribuidos.backend_rest.models.embeddable.EventRegistrationId;
 import com.tp_distribuidos.backend_rest.models.entities.EventRegistration;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
 public interface EventRegistrationRepository extends JpaRepository<EventRegistration, EventRegistrationId> {
 
     List<EventRegistration> findByEventId(Long eventId);
+
+    @Query("SELECT r FROM EventRegistration r JOIN FETCH r.user WHERE r.event.id = :eventId ORDER BY r.registeredAt ASC")
+    List<EventRegistration> findByEventIdWithUser(@Param("eventId") Long eventId);
 
     List<EventRegistration> findByUserId(Long userId);
 

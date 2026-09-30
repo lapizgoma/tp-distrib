@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Builder
@@ -40,7 +41,14 @@ public class EventResponseDTO {
     @Schema(example = "VISITA_GUIADA")
     private EventType eventType;
 
+    @Schema(description = "Lista de inscriptos; solo se completa para el curador a cargo o un administrador")
+    private List<EventAttendeeDTO> attendees;
+
     public static EventResponseDTO fromEntity(Event event) {
+        return fromEntity(event, List.of());
+    }
+
+    public static EventResponseDTO fromEntity(Event event, List<EventAttendeeDTO> attendees) {
         String curatorFullName = null;
         Long curatorId = null;
 
@@ -67,6 +75,7 @@ public class EventResponseDTO {
                 .leadCuratorName(curatorFullName)
                 .maximumCapacity(event.getMaximumCapacity())
                 .eventType(event.getEventType())
+                .attendees(attendees)
                 .build();
     }
 }
