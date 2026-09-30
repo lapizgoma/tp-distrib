@@ -30,13 +30,13 @@ func main() {
 		log.Fatalf("Error al crear esquema: %v", err)
 	}
 
-	handler := handler.New(&handler.Config{
+	graphqlHandler := handler.New(&handler.Config{
 		Schema:   &schema,
 		Pretty:   true,
 		GraphiQL: true,
 	})
 
-	http.Handle("/graphql", handler)
+	http.Handle("/graphql", graphqlHandler)
 
 	log.Println("INFO: Servidor GraphQL corriendo en http://localhost:8082/graphql")
 	log.Fatal(http.ListenAndServe(":8082", nil))
