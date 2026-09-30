@@ -89,7 +89,7 @@ var worksField = &graphql.Field{
 		"availability": &graphql.ArgumentConfig{Type: availabilityEnum},
 	},
 	Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-		works, err := fetchWorks(p.Context)
+		works, err := fetchWorks(p.Context, p.Args)
 		if err != nil {
 			return nil, err
 		}

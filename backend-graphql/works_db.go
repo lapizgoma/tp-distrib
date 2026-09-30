@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-func fetchWorks(ctx context.Context) ([]Work, error) {
+func fetchWorks(ctx context.Context, args map[string]interface{}) ([]Work, error) {
 	query := `
 		SELECT
 		    w.id,
@@ -22,9 +22,26 @@ func fetchWorks(ctx context.Context) ([]Work, error) {
 		    w.availability
 		FROM works w
 		JOIN artists a ON a.id = w.artist_id
-		ORDER BY w.id`
+		WHERE 1 = 1`
 
-	rows, err := db.QueryContext(ctx, query)
+	var queryArgs []interface{}
+
+	if era, ok := args["era"].(string); ok {
+		query += " AND w.era = ?"
+		queryArgs = append(queryArgs, era)
+	}
+	if technique, ok := args["technique"].(string); ok {
+		query += " AND w.technique = ?"
+		queryArgs = append(queryArgs, technique)
+	}
+	if location, ok := args["location"].(string); ok {
+		query += " AND w.location = ?"
+		queryArgs = append(queryArgs, location)
+	}
+
+	query += " ORDER BY w.id"
+
+	rows, err := db.QueryContext(ctx, query, queryArgs...)
 	if err != nil {
 		return nil, fmt.Errorf("falló la query de obras: %w", err)
 	}
