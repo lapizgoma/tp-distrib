@@ -102,7 +102,7 @@ var workType = graphql.NewObject(graphql.ObjectConfig{
 		},
 		"comments": &graphql.Field{
 			Type:        graphql.NewList(commentType),
-			Description: "Comentarios de los visitantes. Todavía no implementado: devuelve null.",
+			Description: "Comentarios de los visitantes sobre la obra, del más antiguo al más reciente. Lista vacía si la obra no tiene comentarios.",
 		},
 	},
 })
