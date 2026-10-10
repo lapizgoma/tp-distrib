@@ -1,5 +1,7 @@
 package com.tp_distribuidos.backend_rest.services;
 
+import com.tp_distribuidos.backend_rest.dtos.AttendanceReportFilterRequestDTO;
+import com.tp_distribuidos.backend_rest.enums.EventStatus;
 import com.tp_distribuidos.backend_rest.enums.EventType;
 import com.tp_distribuidos.backend_rest.models.entities.Event;
 import com.tp_distribuidos.backend_rest.models.entities.User;
@@ -7,9 +9,14 @@ import com.tp_distribuidos.backend_rest.reports.AttendanceReportExcelWriter;
 import com.tp_distribuidos.backend_rest.reports.AttendanceReportRowDTO;
 import com.tp_distribuidos.backend_rest.repositories.EventRegistrationRepository;
 import com.tp_distribuidos.backend_rest.repositories.EventRepository;
+import com.tp_distribuidos.backend_rest.specifications.EventSpecifications;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -32,29 +39,58 @@ public class ReportService {
     private final AttendanceReportExcelWriter excelWriter;
 
     /**
-     * Genera el informe de asistencia con una hoja por tipo de evento.
+     * Genera el informe de asistencia con una hoja por tipo de evento, aplicando los
+     * filtros opcionales de rango de fechas, tipo de evento y estado temporal.
      *
+     * @param filter filtros opcionales; puede ser {@code null}
      * @return el contenido binario del archivo {@code .xlsx}.
      */
-    public byte[] generateAttendanceReport() {
-        Map<EventType, List<AttendanceReportRowDTO>> rowsByType = collectRowsByEventType();
+    public byte[] generateAttendanceReport(AttendanceReportFilterRequestDTO filter) {
+        validateDateRange(filter);
+        Map<EventType, List<AttendanceReportRowDTO>> rowsByType = collectRowsByEventType(filter);
         return excelWriter.write(rowsByType);
     }
 
-    private Map<EventType, List<AttendanceReportRowDTO>> collectRowsByEventType() {
+    private void validateDateRange(AttendanceReportFilterRequestDTO filter) {
+        if (filter != null && filter.getStartDate() != null && filter.getEndDate() != null
+                && filter.getStartDate().isAfter(filter.getEndDate())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "La fecha 'startDate' no puede ser posterior a 'endDate'");
+        }
+    }
+
+    private Map<EventType, List<AttendanceReportRowDTO>> collectRowsByEventType(AttendanceReportFilterRequestDTO filter) {
         Map<Long, Long> registrationsByEvent = registrationRepository.countByEventGrouped()
                 .stream()
                 .collect(Collectors.toMap(
                         EventRegistrationRepository.EventRegistrationCount::getEventId,
                         EventRegistrationRepository.EventRegistrationCount::getTotal));
 
-        return eventRepository.findAllWithCurator()
+        LocalDateTime now = LocalDateTime.now();
+
+        return eventRepository
+                .findAll(EventSpecifications.withReportFilters(filter), Sort.by(Sort.Direction.ASC, "datetime"))
                 .stream()
+                .filter(event -> matchesStatus(event, filter, now))
                 .collect(Collectors.groupingBy(
                         Event::getEventType,
                         Collectors.mapping(
                                 event -> toRow(event, registrationsByEvent.getOrDefault(event.getId(), 0L)),
                                 Collectors.toList())));
+    }
+
+    private boolean matchesStatus(Event event, AttendanceReportFilterRequestDTO filter, LocalDateTime now) {
+        EventStatus status = filter != null ? filter.getStatus() : null;
+        if (status == null || status == EventStatus.ALL) {
+            return true;
+        }
+
+        if (status == EventStatus.UPCOMING) {
+            return !event.getDatetime().isBefore(now);
+        }
+
+        int duration = event.getDuration() != null ? event.getDuration() : 0;
+        return event.getDatetime().plusMinutes(duration).isBefore(now);
     }
 
     private AttendanceReportRowDTO toRow(Event event, long registered) {

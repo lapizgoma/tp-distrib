@@ -6,33 +6,33 @@ import com.tp_distribuidos.backend_rest.enums.EventType;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Getter
 @EqualsAndHashCode
 public class EventFilterConfigDTO {
 
-    private final EventType eventType;
+    private final EventType type;
 
-    private final Long curadorId;
+    private final Long curatorId;
 
-    private final LocalDateTime fechaDesde;
+    private final LocalDate startDate;
 
-    private final LocalDateTime fechaHasta;
+    private final LocalDate endDate;
 
     @JsonCreator
-    public EventFilterConfigDTO(@JsonProperty("eventType") EventType eventType,
-                                @JsonProperty("curadorId") Long curadorId,
-                                @JsonProperty("fechaDesde") LocalDateTime fechaDesde,
-                                @JsonProperty("fechaHasta") LocalDateTime fechaHasta) {
-        this.eventType = eventType;
-        this.curadorId = curadorId;
-        this.fechaDesde = fechaDesde;
-        this.fechaHasta = fechaHasta;
+    public EventFilterConfigDTO(@JsonProperty("type") EventType type,
+                                @JsonProperty("curatorId") Long curatorId,
+                                @JsonProperty("startDate") LocalDate startDate,
+                                @JsonProperty("endDate") LocalDate endDate) {
+        this.type = type;
+        this.curatorId = curatorId;
+        this.startDate = startDate;
+        this.endDate = endDate;
     }
 
-    public static EventFilterConfigDTO of(EventType eventType, Long curadorId,
-                                          LocalDateTime fechaDesde, LocalDateTime fechaHasta) {
-        return new EventFilterConfigDTO(eventType, curadorId, fechaDesde, fechaHasta);
+    public static EventFilterConfigDTO of(EventType type, Long curatorId,
+                                          LocalDate startDate, LocalDate endDate) {
+        return new EventFilterConfigDTO(type, curatorId, startDate, endDate);
     }
 }

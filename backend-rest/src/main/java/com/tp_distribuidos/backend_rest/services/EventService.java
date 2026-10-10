@@ -43,10 +43,10 @@ public class EventService {
     }
 
     private void validateDateRange(EventFilterRequestDTO filter) {
-        if (filter != null && filter.getFechaDesde() != null && filter.getFechaHasta() != null
-                && filter.getFechaDesde().isAfter(filter.getFechaHasta())) {
+        if (filter != null && filter.getStartDate() != null && filter.getEndDate() != null
+                && filter.getStartDate().isAfter(filter.getEndDate())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "La fecha 'fechaDesde' no puede ser posterior a 'fechaHasta'");
+                    "La fecha 'startDate' no puede ser posterior a 'endDate'");
         }
     }
 

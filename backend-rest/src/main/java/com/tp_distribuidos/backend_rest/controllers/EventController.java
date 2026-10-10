@@ -29,7 +29,8 @@ public class EventController {
 
     @GetMapping
     @Operation(summary = "Listar eventos",
-            description = "Retorna todos los eventos (futuros y pasados), con filtros opcionales por fecha, tipo de evento o curador a cargo.")
+            description = "Retorna todos los eventos (futuros y pasados), con filtros opcionales por tipo de evento, "
+                    + "curador a cargo y rango de fechas (startDate inclusive, endDate exclusiva).")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Lista recuperada exitosamente"),
             @ApiResponse(responseCode = "400", description = "Rango de fechas inválido")
