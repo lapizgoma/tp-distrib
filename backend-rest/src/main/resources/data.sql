@@ -58,15 +58,15 @@ INSERT IGNORE INTO works (id, title, artist_id, image_url, creation_year, techni
 -- Las fechas son relativas al primer seed: con INSERT IGNORE, los arranques
 -- posteriores conservan las filas existentes y las fechas envejecen.
 INSERT IGNORE INTO events (id, title, description, datetime, duration, lead_curator_id, maximum_capacity, event_type) VALUES
-    (1,  'Visita guiada por Grandes Maestros', 'Recorrido guiado por las obras maestras del Renacimiento y el Barroco.',            DATE_ADD(NOW(), INTERVAL 7 DAY),  60,  @curadorId,  25,  'VISITA_GUIADA'),
+    (1,  'Visita guiada por Grandes Maestros', 'Recorrido guiado por las obras maestras del Renacimiento y el Barroco.',              DATE_ADD(NOW(), INTERVAL 7  DAY), 60,  @curadorId,  25,  'VISITA_GUIADA'),
     (2,  'Visita guiada nocturna',             'Recorrido nocturno con música en vivo por las salas de arte moderno.',                DATE_ADD(NOW(), INTERVAL 21 DAY), 60,  @curadorId,  20,  'VISITA_GUIADA'),
     (3,  'Taller de pintura impresionista',    'Taller práctico para experimentar con pinceladas sueltas y luz natural.',             DATE_ADD(NOW(), INTERVAL 14 DAY), 120, @curadorId,  15,  'TALLER'),
     (4,  'Taller de autorretrato',             'Taller introductorio al autorretrato inspirado en la obra de Frida Kahlo.',           DATE_SUB(NOW(), INTERVAL 20 DAY), 120, @curador2Id, 15,  'TALLER'),
     (5,  'Charla: el Guernica',                'Análisis del contexto histórico y la composición del mural de Picasso.',              DATE_ADD(NOW(), INTERVAL 10 DAY), 90,  @curador2Id, 100, 'CHARLA'),
     (6,  'Charla: vanguardias del siglo XX',   'Panorama de los movimientos de vanguardia y su ruptura con la tradición.',            DATE_SUB(NOW(), INTERVAL 45 DAY), 90,  @curadorId,  80,  'CHARLA'),
     (7,  'Exposición temporal: Surrealismo',   'Muestra temporaria con obras oníricas del surrealismo europeo y latinoamericano.',    DATE_ADD(NOW(), INTERVAL 30 DAY), 180, @curador2Id, 200, 'EXPOSICION'),
-    (8,  'Exposición: Impresionismo',          'Recorrido por la luz y el color de los maestros impresionistas.',                     DATE_SUB(NOW(), INTERVAL 8 DAY),  180, @curador2Id, 150, 'EXPOSICION'),
-    (9,  'Visita guiada familiar',             'Recorrido pensado para toda la familia con actividades para chicos.',                 DATE_SUB(NOW(), INTERVAL 3 DAY),  45,  @curador2Id, 30,  'VISITA_GUIADA'),
+    (8,  'Exposición: Impresionismo',          'Recorrido por la luz y el color de los maestros impresionistas.',                     DATE_SUB(NOW(), INTERVAL 8  DAY), 180, @curador2Id, 150, 'EXPOSICION'),
+    (9,  'Visita guiada familiar',             'Recorrido pensado para toda la familia con actividades para chicos.',                 DATE_SUB(NOW(), INTERVAL 3  DAY), 45,  @curador2Id, 30,  'VISITA_GUIADA'),
     (10, 'Taller de cerámica',                 'Taller de modelado en arcilla inspirado en piezas de la colección.',                  DATE_ADD(NOW(), INTERVAL 40 DAY), 150, @curador2Id, 12,  'TALLER');
 
 -- Visitantes demo para poblar inscripciones. Comparten la misma contraseña
