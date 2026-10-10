@@ -1,5 +1,6 @@
 package com.tp_distribuidos.backend_rest.specifications;
 
+import com.tp_distribuidos.backend_rest.dtos.AttendanceReportFilterRequestDTO;
 import com.tp_distribuidos.backend_rest.dtos.EventFilterRequestDTO;
 import com.tp_distribuidos.backend_rest.models.entities.Event;
 import jakarta.persistence.criteria.Predicate;
@@ -63,6 +64,42 @@ public final class EventSpecifications {
                 }
                 if (filter.getFechaHasta() != null) {
                     predicates.add(cb.lessThanOrEqualTo(root.get("datetime"), filter.getFechaHasta()));
+                }
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+
+    /**
+     * Construye una {@link Specification} de {@link Event} a partir de los filtros del
+     * informe de asistencia.
+     *
+     * <p>Se mantiene separada de {@link #withFilters(EventFilterRequestDTO)} porque la
+     * semántica del rango de fechas difiere: aquí {@code endDate} es <strong>exclusiva</strong>
+     * ({@code datetime < endDate}), alineada con el argumento {@code endDate} del reporte
+     * de GraphQL. El tipo de evento se filtra por igualdad.</p>
+     *
+     * <p>El filtro de estado ({@code status}) no se resuelve aquí: depende del momento
+     * actual y de la duración del evento ({@code datetime + duration}), por lo que se
+     * aplica en la capa de servicio.</p>
+     *
+     * @param filter filtros opcionales; puede ser {@code null}
+     * @return una {@code Specification} lista para ejecutarse
+     */
+    public static Specification<Event> withReportFilters(AttendanceReportFilterRequestDTO filter) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (filter != null) {
+                if (filter.getType() != null) {
+                    predicates.add(cb.equal(root.get("eventType"), filter.getType()));
+                }
+                if (filter.getStartDate() != null) {
+                    predicates.add(cb.greaterThanOrEqualTo(root.get("datetime"), filter.getStartDate().atStartOfDay()));
+                }
+                if (filter.getEndDate() != null) {
+                    predicates.add(cb.lessThan(root.get("datetime"), filter.getEndDate().atStartOfDay()));
                 }
             }
 

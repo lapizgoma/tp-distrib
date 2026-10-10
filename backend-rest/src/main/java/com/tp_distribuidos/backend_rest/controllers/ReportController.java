@@ -1,5 +1,6 @@
 package com.tp_distribuidos.backend_rest.controllers;
 
+import com.tp_distribuidos.backend_rest.dtos.AttendanceReportFilterRequestDTO;
 import com.tp_distribuidos.backend_rest.services.ReportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -7,12 +8,14 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -36,14 +39,17 @@ public class ReportController {
     @PreAuthorize("hasAnyRole('CURADOR', 'ADMINISTRADOR')")
     @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "Exportar informe de asistencia",
-            description = "Descarga un archivo Excel con la asistencia a los eventos, agrupada en una hoja por tipo de evento.")
+            description = "Descarga un archivo Excel con la asistencia a los eventos, agrupada en una hoja por tipo de evento. "
+                    + "Permite filtrar por rango de fechas, tipo de evento y estado temporal (ENDED, UPCOMING o ALL).")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Informe generado exitosamente"),
+            @ApiResponse(responseCode = "400", description = "Rango de fechas inválido"),
             @ApiResponse(responseCode = "401", description = "No autenticado"),
             @ApiResponse(responseCode = "403", description = "No autorizado para exportar informes")
     })
-    public ResponseEntity<byte[]> exportAttendanceReport() {
-        byte[] report = reportService.generateAttendanceReport();
+    public ResponseEntity<byte[]> exportAttendanceReport(
+            @ParameterObject @ModelAttribute AttendanceReportFilterRequestDTO filter) {
+        byte[] report = reportService.generateAttendanceReport(filter);
 
         String fileName = "reporte-asistencia-" + LocalDate.now().format(FILE_DATE_FORMATTER) + ".xlsx";
         String contentDisposition = ContentDisposition.attachment()
