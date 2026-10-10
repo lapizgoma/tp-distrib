@@ -29,7 +29,8 @@ public class EventController {
 
     @GetMapping
     @Operation(summary = "Listar eventos",
-            description = "Retorna todos los eventos (futuros y pasados), con filtros opcionales por fecha, tipo de evento o curador a cargo.")
+            description = "Retorna todos los eventos (futuros y pasados), con filtros opcionales por tipo de evento, "
+                    + "curador a cargo y rango de fechas (startDate inclusive, endDate exclusiva).")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Lista recuperada exitosamente"),
             @ApiResponse(responseCode = "400", description = "Rango de fechas inválido")
@@ -40,7 +41,9 @@ public class EventController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Obtener detalle de un evento", description = "Retorna la información completa de un evento por ID.")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Obtener detalle de un evento", description = "Retorna la información completa de un evento por ID. " + 
+    "*Nota: Solo los usuarios autenticados pueden acceder a esta información.*")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Evento encontrado"),
             @ApiResponse(responseCode = "404", description = "Evento no encontrado")

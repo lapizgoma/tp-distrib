@@ -12,6 +12,7 @@ import com.tp_distribuidos.backend_rest.repositories.EventRepository;
 import com.tp_distribuidos.backend_rest.repositories.UserRepository;
 import com.tp_distribuidos.backend_rest.specifications.EventSpecifications;
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -42,10 +43,10 @@ public class EventService {
     }
 
     private void validateDateRange(EventFilterRequestDTO filter) {
-        if (filter != null && filter.getFechaDesde() != null && filter.getFechaHasta() != null
-                && filter.getFechaDesde().isAfter(filter.getFechaHasta())) {
+        if (filter != null && filter.getStartDate() != null && filter.getEndDate() != null
+                && filter.getStartDate().isAfter(filter.getEndDate())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "La fecha 'fechaDesde' no puede ser posterior a 'fechaHasta'");
+                    "La fecha 'startDate' no puede ser posterior a 'endDate'");
         }
     }
 
