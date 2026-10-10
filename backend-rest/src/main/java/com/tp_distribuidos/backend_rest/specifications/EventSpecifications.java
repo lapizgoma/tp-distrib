@@ -2,10 +2,14 @@ package com.tp_distribuidos.backend_rest.specifications;
 
 import com.tp_distribuidos.backend_rest.dtos.AttendanceReportFilterRequestDTO;
 import com.tp_distribuidos.backend_rest.dtos.EventFilterRequestDTO;
+import com.tp_distribuidos.backend_rest.enums.EventType;
 import com.tp_distribuidos.backend_rest.models.entities.Event;
+import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,7 +30,8 @@ public final class EventSpecifications {
     }
 
     /**
-     * Construye una {@link Specification} de {@link Event} a partir de los filtros provistos.
+     * Construye una {@link Specification} de {@link Event} a partir de los filtros de listado
+     * de eventos.
      *
      * <p>Cada criterio se agrega únicamente si su valor es distinto de {@code null}, por lo que
      * cualquier combinación de filtros es válida. Si el filtro es {@code null} o todos sus
@@ -35,13 +40,13 @@ public final class EventSpecifications {
      *
      * <p>Semántica de los filtros:</p>
      * <ul>
-     *     <li>{@code eventType}: igualdad con el tipo de evento.</li>
-     *     <li>{@code curadorId}: igualdad con el ID del curador a cargo ({@code leadCurator}).</li>
-     *     <li>{@code fechaDesde}: fecha/hora del evento mayor o igual a la indicada (inclusive).</li>
-     *     <li>{@code fechaHasta}: fecha/hora del evento menor o igual a la indicada (inclusive).</li>
+     *     <li>{@code type}: igualdad con el tipo de evento.</li>
+     *     <li>{@code curatorId}: igualdad con el ID del curador a cargo ({@code leadCurator}).</li>
+     *     <li>{@code startDate}: fecha del evento mayor o igual a la indicada (inclusive).</li>
+     *     <li>{@code endDate}: fecha del evento estrictamente anterior a la indicada (exclusiva).</li>
      * </ul>
      *
-     * <p>La validación de que {@code fechaDesde} no sea posterior a {@code fechaHasta} no se
+     * <p>La validación de que {@code startDate} no sea posterior a {@code endDate} no se
      * realiza aquí, sino en la capa de servicio, ya que es una regla de negocio y no parte
      * de la construcción del predicado.</p>
      *
@@ -53,17 +58,9 @@ public final class EventSpecifications {
             List<Predicate> predicates = new ArrayList<>();
 
             if (filter != null) {
-                if (filter.getEventType() != null) {
-                    predicates.add(cb.equal(root.get("eventType"), filter.getEventType()));
-                }
-                if (filter.getCuradorId() != null) {
-                    predicates.add(cb.equal(root.get("leadCurator").get("id"), filter.getCuradorId()));
-                }
-                if (filter.getFechaDesde() != null) {
-                    predicates.add(cb.greaterThanOrEqualTo(root.get("datetime"), filter.getFechaDesde()));
-                }
-                if (filter.getFechaHasta() != null) {
-                    predicates.add(cb.lessThanOrEqualTo(root.get("datetime"), filter.getFechaHasta()));
+                addCommonPredicates(predicates, root, cb, filter.getType(), filter.getStartDate(), filter.getEndDate());
+                if (filter.getCuratorId() != null) {
+                    predicates.add(cb.equal(root.get("leadCurator").get("id"), filter.getCuratorId()));
                 }
             }
 
@@ -75,10 +72,10 @@ public final class EventSpecifications {
      * Construye una {@link Specification} de {@link Event} a partir de los filtros del
      * informe de asistencia.
      *
-     * <p>Se mantiene separada de {@link #withFilters(EventFilterRequestDTO)} porque la
-     * semántica del rango de fechas difiere: aquí {@code endDate} es <strong>exclusiva</strong>
-     * ({@code datetime < endDate}), alineada con el argumento {@code endDate} del reporte
-     * de GraphQL. El tipo de evento se filtra por igualdad.</p>
+     * <p>Comparte con {@link #withFilters(EventFilterRequestDTO)} los predicados de tipo y
+     * rango de fechas ({@code startDate} inclusiva, {@code endDate} exclusiva), de modo que
+     * ambos endpoints no puedan divergir en su semántica. La única diferencia es que aquí no
+     * se filtra por curador.</p>
      *
      * <p>El filtro de estado ({@code status}) no se resuelve aquí: depende del momento
      * actual y de la duración del evento ({@code datetime + duration}), por lo que se
@@ -92,18 +89,28 @@ public final class EventSpecifications {
             List<Predicate> predicates = new ArrayList<>();
 
             if (filter != null) {
-                if (filter.getType() != null) {
-                    predicates.add(cb.equal(root.get("eventType"), filter.getType()));
-                }
-                if (filter.getStartDate() != null) {
-                    predicates.add(cb.greaterThanOrEqualTo(root.get("datetime"), filter.getStartDate().atStartOfDay()));
-                }
-                if (filter.getEndDate() != null) {
-                    predicates.add(cb.lessThan(root.get("datetime"), filter.getEndDate().atStartOfDay()));
-                }
+                addCommonPredicates(predicates, root, cb, filter.getType(), filter.getStartDate(), filter.getEndDate());
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
+    }
+
+    /**
+     * Agrega los predicados compartidos por todos los filtros de eventos: tipo, fecha desde
+     * (inclusive) y fecha hasta (exclusiva). Centralizar esta lógica garantiza que las
+     * distintas superficies de filtrado mantengan la misma semántica.
+     */
+    private static void addCommonPredicates(List<Predicate> predicates, Root<Event> root, CriteriaBuilder cb,
+                                            EventType type, LocalDate startDate, LocalDate endDate) {
+        if (type != null) {
+            predicates.add(cb.equal(root.get("eventType"), type));
+        }
+        if (startDate != null) {
+            predicates.add(cb.greaterThanOrEqualTo(root.get("datetime"), startDate.atStartOfDay()));
+        }
+        if (endDate != null) {
+            predicates.add(cb.lessThan(root.get("datetime"), endDate.atStartOfDay()));
+        }
     }
 }
