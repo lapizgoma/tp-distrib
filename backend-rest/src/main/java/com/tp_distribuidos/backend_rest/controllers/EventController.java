@@ -40,7 +40,9 @@ public class EventController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Obtener detalle de un evento", description = "Retorna la información completa de un evento por ID.")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Obtener detalle de un evento", description = "Retorna la información completa de un evento por ID. " + 
+    "*Nota: Solo los usuarios autenticados pueden acceder a esta información.*")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Evento encontrado"),
             @ApiResponse(responseCode = "404", description = "Evento no encontrado")
