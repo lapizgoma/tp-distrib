@@ -20,10 +20,10 @@ func main() {
 
 	// dispatcher
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasPrefix(r.URL.Path, "/graphql") {
+		if strings.HasPrefix(r.URL.Path, "/api/graphql") {
 			log.Println("INFO: Routing to GraphQL server")
 			gqlProxy.ServeHTTP(w, r)
-		} else if strings.HasPrefix(r.URL.Path, "/rest") {
+		} else if strings.HasPrefix(r.URL.Path, "/api/rest") {
 			log.Println("INFO: Routing to REST service")
 			restProxy.ServeHTTP(w, r)
 		} else {
