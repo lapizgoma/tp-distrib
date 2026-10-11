@@ -1,0 +1,49 @@
+services:
+
+  # Base de Datos MySQL
+  mysql:
+    image: mysql:8
+    container_name: museo-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_NAME:-museo_virtual}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      # Copio los scrips e inicializo la BD automáticamente
+      - ./init-db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Servidor Backend REST (Java)
+  backend-rest:
+    profiles: ["app", "full"]
+    build:
+      context: ./backend-rest
+      dockerfile: Dockerfile
+    container_name: museo-backend-rest
+    ports:
+      - "8081:8081"
+    environment:
+      # Database Configuration
+      DB_HOST: ${DB_HOST:-mysql}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME:-museo_virtual}
+      DB_USER: ${DB_USER:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-root}
+
+      # JWT Configuration
+      JWT_SECRET: ${JWT_SECRET:-dev-only-secret-key-change-me-please-0123456789}
+      JWT_ISSUER: ${JWT_ISSUER:-museo-virtual}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-3600}
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  mysql-data:
