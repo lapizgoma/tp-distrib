@@ -10,6 +10,8 @@ import (
 	"github.com/joho/godotenv"
 )
 
+const graphqlPath = "/api/graphql"
+
 func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Println("INFO: no se encontró .env, se usan las variables del sistema")
@@ -21,6 +23,11 @@ func main() {
 		log.Fatal("JWT_SECRET debe tener al menos 32 caracteres y ser igual al de Spring")
 	}
 	issuer := os.Getenv("JWT_ISSUER")
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8082"
+	}
 
 	rootQuery := graphql.NewObject(graphql.ObjectConfig{
 		Name: "RootQuery",
@@ -44,8 +51,8 @@ func main() {
 		GraphiQL: false,
 	})
 
-	http.Handle("/graphql", AuthMiddleware([]byte(secret), issuer, graphqlHandler))
+	http.Handle(graphqlPath, AuthMiddleware([]byte(secret), issuer, graphqlHandler))
 
-	log.Println("INFO: Servidor GraphQL corriendo en http://localhost:8082/graphql")
-	log.Fatal(http.ListenAndServe(":8082", nil))
+	log.Printf("INFO: Servidor GraphQL corriendo en http://localhost:%s%s", port, graphqlPath)
+	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
