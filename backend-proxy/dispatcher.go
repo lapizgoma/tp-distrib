@@ -5,13 +5,22 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"strings"
 )
 
+func getenv(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
+}
+
 func main() {
-	// definición de endpoints
-	restTarget, _ := url.Parse("http://localhost:8081")
-	gqlTarget, _ := url.Parse("http://localhost:8082")
+	// definición de endpoints (configurables por variables de entorno)
+	restTarget, _ := url.Parse(getenv("REST_TARGET", "http://localhost:8081"))
+	gqlTarget, _ := url.Parse(getenv("GQL_TARGET", "http://localhost:8082"))
+	port := getenv("PORT", "8080")
 
 	// proxies para cada endpoint:
 	// 		se encarga de manejar los encabezados HTTP que son "sensibles" a quién los manda.
@@ -31,8 +40,8 @@ func main() {
 		}
 	})
 
-	log.Println("INFO: Proxy server starting on :8080...")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	log.Printf("INFO: Proxy server starting on :%s...", port)
+	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		log.Fatal(err)
 	}
 }
