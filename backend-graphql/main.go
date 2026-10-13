@@ -1,11 +1,13 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"os"
 
 	"github.com/graphql-go/graphql"
+	"github.com/graphql-go/graphql/gqlerrors"
 	"github.com/graphql-go/handler"
 	"github.com/joho/godotenv"
 )
@@ -49,6 +51,18 @@ func main() {
 		Schema:   &schema,
 		Pretty:   true,
 		GraphiQL: false,
+		FormatErrorFn: func(err error) gqlerrors.FormattedError {
+			formatted := gqlerrors.FormatError(err)
+			code := "INTERNAL_ERROR"
+			switch {
+			case errors.Is(err, ErrUnauthenticated):
+				code = "UNAUTHENTICATED"
+			case errors.Is(err, ErrForbidden):
+				code = "FORBIDDEN"
+			}
+			formatted.Extensions = map[string]interface{}{"code": code}
+			return formatted
+		},
 	})
 
 	http.Handle(graphqlPath, AuthMiddleware([]byte(secret), issuer, graphqlHandler))

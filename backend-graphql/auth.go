@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -11,6 +12,12 @@ import (
 type ctxKey string
 
 const userKey ctxKey = "user"
+
+// Errores que los resolvers devuelven para indicar por qué se rechazó la operación.
+var (
+	ErrUnauthenticated = errors.New("autenticación requerida")
+	ErrForbidden       = errors.New("no tenés permisos para esta operación")
+)
 
 // Datos del usuario que vienen dentro del token.
 type User struct {
@@ -28,7 +35,7 @@ func AuthMiddleware(secret []byte, issuer string, next http.Handler) http.Handle
 			return
 		}
 		if !strings.HasPrefix(header, "Bearer ") {
-			http.Error(w, "missing token", http.StatusUnauthorized)
+			writeProblem(w, r, http.StatusUnauthorized, "Token inválido o vencido")
 			return
 		}
 		tokenStr := strings.TrimPrefix(header, "Bearer ")
@@ -40,13 +47,13 @@ func AuthMiddleware(secret []byte, issuer string, next http.Handler) http.Handle
 			jwt.WithExpirationRequired(),
 		)
 		if err != nil || !token.Valid {
-			http.Error(w, "invalid token", http.StatusUnauthorized)
+			writeProblem(w, r, http.StatusUnauthorized, "Token inválido o vencido")
 			return
 		}
 
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
-			http.Error(w, "invalid claims", http.StatusUnauthorized)
+			writeProblem(w, r, http.StatusUnauthorized, "Token inválido o vencido")
 			return
 		}
 
