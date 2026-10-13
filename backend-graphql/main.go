@@ -50,16 +50,21 @@ func main() {
 	graphqlHandler := handler.New(&handler.Config{
 		Schema:   &schema,
 		Pretty:   true,
-		GraphiQL: false,
+		GraphiQL: true,
 		FormatErrorFn: func(err error) gqlerrors.FormattedError {
 			formatted := gqlerrors.FormatError(err)
 			code := "INTERNAL_ERROR"
-			switch {
-			case errors.Is(err, ErrUnauthenticated):
-				code = "UNAUTHENTICATED"
-			case errors.Is(err, ErrForbidden):
-				code = "FORBIDDEN"
+
+			if gqlErr, ok := err.(*gqlerrors.Error); ok {
+				originalErr := gqlErr.OriginalError
+				switch {
+				case errors.Is(originalErr, ErrUnauthenticated):
+					code = "UNAUTHENTICATED"
+				case errors.Is(originalErr, ErrForbidden):
+					code = "FORBIDDEN"
+				}
 			}
+
 			formatted.Extensions = map[string]interface{}{"code": code}
 			return formatted
 		},

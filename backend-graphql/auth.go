@@ -30,6 +30,7 @@ type User struct {
 func AuthMiddleware(secret []byte, issuer string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		header := r.Header.Get("Authorization")
+		// ¿no todos los handler requieren un token de autorización?
 		if header == "" {
 			next.ServeHTTP(w, r)
 			return
