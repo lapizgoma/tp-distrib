@@ -1,11 +1,15 @@
-import type { EventResponseDTO, EventType } from '../types/events.types';
+import type { EventResponseDTO, EventFilters } from '../types/events.types';
 
-const BASE_URL = 'http://localhost:8080/api/rest';
+export async function getEvents(filters: EventFilters = {}): Promise<EventResponseDTO[]> {
+    const params = new URLSearchParams();
+    
+    if (filters.type) params.append('type', filters.type);
+    if (filters.curatorId) params.append('curatorId', filters.curatorId.toString());
+    if (filters.startDate) params.append('startDate', filters.startDate);
+    if (filters.endDate) params.append('endDate', filters.endDate);
 
-export async function getEvents(eventType: EventType | '' = ''): Promise<EventResponseDTO[]> {
-    const url = eventType
-        ? `${BASE_URL}/events?type=${eventType}`
-        : `${BASE_URL}/events`;
+    const queryString = params.toString();
+    const url = queryString ? `/api/rest/events?${queryString}` : '/api/rest/events';
 
     const response = await fetch(url);
 
