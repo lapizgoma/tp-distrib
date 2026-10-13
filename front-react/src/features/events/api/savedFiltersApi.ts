@@ -1,5 +1,5 @@
 import type { SavedFilterRequestDTO, SavedFilterResponseDTO } from '../types/events.types';
-import { apiRequest } from './http';
+import { apiRequest } from '../../../shared/api/http';
 
 /** GET /api/rest/filters — filtros guardados del usuario autenticado. */
 export function getSavedFilters(signal?: AbortSignal) {
