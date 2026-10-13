@@ -4,14 +4,14 @@ import com.tp_distribuidos.backend_rest.dtos.WorkDetailDTO;
 import com.tp_distribuidos.backend_rest.dtos.WorkFiltersDTO;
 import com.tp_distribuidos.backend_rest.dtos.WorkRequestDTO;
 import com.tp_distribuidos.backend_rest.dtos.WorkSummaryDTO;
-import com.tp_distribuidos.backend_rest.exceptions.ArtistNotFoundException;
-import com.tp_distribuidos.backend_rest.exceptions.WorkNotFoundException;
+import com.tp_distribuidos.backend_rest.exceptions.ApiException;
 import com.tp_distribuidos.backend_rest.models.entities.Artist;
 import com.tp_distribuidos.backend_rest.models.entities.Work;
 import com.tp_distribuidos.backend_rest.repositories.ArtistRepository;
 import com.tp_distribuidos.backend_rest.repositories.CommentRepository;
 import com.tp_distribuidos.backend_rest.repositories.WorkRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,7 +41,7 @@ public class WorkService {
     @Transactional(readOnly = true)
     public WorkDetailDTO getWorkById(Long id) {
         Work work = workRepository.findByIdWithArtist(id)
-                .orElseThrow(() -> new WorkNotFoundException(id));
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Obra no encontrada con id: " + id));
 
         return WorkDetailDTO.fromEntity(work);
     }
@@ -68,7 +68,7 @@ public class WorkService {
     @Transactional
     public WorkDetailDTO updateWork(Long id, WorkRequestDTO request) {
         Work work = workRepository.findByIdWithArtist(id)
-                .orElseThrow(() -> new WorkNotFoundException(id));
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Obra no encontrada con id: " + id));
 
         Artist artist = findArtist(request.artistId());
 
@@ -90,7 +90,7 @@ public class WorkService {
     @Transactional
     public void deleteWork(Long id) {
         Work work = workRepository.findById(id)
-                .orElseThrow(() -> new WorkNotFoundException(id));
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Obra no encontrada con id: " + id));
 
         commentRepository.deleteByWorkId(id);
         workRepository.delete(work);
@@ -98,6 +98,6 @@ public class WorkService {
 
     private Artist findArtist(Long artistId) {
         return artistRepository.findById(artistId)
-                .orElseThrow(() -> new ArtistNotFoundException(artistId));
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Artista no encontrado con id: " + artistId));
     }
 }
