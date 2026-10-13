@@ -5,6 +5,9 @@ import com.tp_distribuidos.backend_rest.security.JwtAuthenticationFilter;
 import com.tp_distribuidos.backend_rest.security.RestAccessDeniedHandler;
 import com.tp_distribuidos.backend_rest.security.RestAuthenticationEntryPoint;
 import com.tp_distribuidos.backend_rest.security.UserDetailsServiceImpl;
+
+import java.util.List;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,6 +22,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.http.HttpMethod;
 
 /**
@@ -86,6 +92,30 @@ public class SecurityConfig {
                         .accessDeniedHandler(restAccessDeniedHandler))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
+    }
+
+    /**
+     * Define las reglas de CORS globales para Spring Security.
+     */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        
+        // Permitir solicitudes desde el Proxy de Go (8080)
+        configuration.setAllowedOriginPatterns(List.of("http://localhost:8080"));
+        
+        // Métodos HTTP habilitados
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
+        
+        // Encabezados permitidos (incluyendo Authorization para los tokens JWT)
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
+        
+        // Permitir credenciales/cookies si fuera necesario
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 
     /**
