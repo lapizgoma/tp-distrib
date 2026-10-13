@@ -1,11 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-<<<<<<< HEAD
 import { Layout } from "@/shared/components/Layout";
-import { EventsView } from "@/features/events/views/EventsView";
-=======
-import { Layout } from "../src/shared/components/Layout";
-import { EventsView } from "../src/features/events/views/EventsView";
->>>>>>> 69e50b02f4e43671dee13fe29cee57f695ca7d4a
+import { EventsListView } from "@/features/events/views/EventsListView";
+import { EventDetailView } from "@/features/events/views/EventDetailView";
+import { EventFormView } from "@/features/events/views/EventFormView";
+import { SavedFiltersView } from "@/features/events/views/SavedFiltersView";
 
 export function AppRouter() {
     return (
@@ -13,8 +11,13 @@ export function AppRouter() {
             <Routes>
                 <Route path="/" element={<Layout />}>
                     <Route index element={<h1>Bienvenido al Museo Virtual Interactivo</h1>} />
-                    <Route path="eventos" element={<EventsView />} />
 
+                    {/* Feature: Eventos e Inscripciones */}
+                    <Route path="eventos" element={<EventsListView />} />
+                    <Route path="eventos/nuevo" element={<EventFormView />} />
+                    <Route path="eventos/mis-filtros" element={<SavedFiltersView />} />
+                    <Route path="eventos/:id" element={<EventDetailView />} />
+                    <Route path="eventos/:id/editar" element={<EventFormView />} />
                 </Route>
                 <Route path="*" element={<Navigate to="/" />} />
             </Routes>
