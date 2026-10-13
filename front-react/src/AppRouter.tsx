@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { Layout } from "../shared/components/Layout";
-import { EventsView } from "../features/events/views/EventsView";
+import { Layout } from "../src/shared/components/Layout";
+import { EventsView } from "../src/features/events/views/EventsView";
 
 export function AppRouter() {
     return (
