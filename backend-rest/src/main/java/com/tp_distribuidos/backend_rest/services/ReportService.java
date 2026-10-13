@@ -3,6 +3,7 @@ package com.tp_distribuidos.backend_rest.services;
 import com.tp_distribuidos.backend_rest.dtos.AttendanceReportFilterRequestDTO;
 import com.tp_distribuidos.backend_rest.enums.EventStatus;
 import com.tp_distribuidos.backend_rest.enums.EventType;
+import com.tp_distribuidos.backend_rest.exceptions.ApiException;
 import com.tp_distribuidos.backend_rest.models.entities.Event;
 import com.tp_distribuidos.backend_rest.models.entities.User;
 import com.tp_distribuidos.backend_rest.reports.AttendanceReportExcelWriter;
@@ -14,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -54,7 +54,7 @@ public class ReportService {
     private void validateDateRange(AttendanceReportFilterRequestDTO filter) {
         if (filter != null && filter.getStartDate() != null && filter.getEndDate() != null
                 && filter.getStartDate().isAfter(filter.getEndDate())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+            throw new ApiException(HttpStatus.BAD_REQUEST,
                     "La fecha 'startDate' no puede ser posterior a 'endDate'");
         }
     }

@@ -5,12 +5,12 @@ import com.tp_distribuidos.backend_rest.dtos.LoginResponseDTO;
 import com.tp_distribuidos.backend_rest.dtos.RegisterRequestDTO;
 import com.tp_distribuidos.backend_rest.dtos.UserResponseDTO;
 import com.tp_distribuidos.backend_rest.enums.UserRole;
-import com.tp_distribuidos.backend_rest.exceptions.EmailAlreadyExistsException;
-import com.tp_distribuidos.backend_rest.exceptions.PasswordsDoNotMatchException;
+import com.tp_distribuidos.backend_rest.exceptions.ApiException;
 import com.tp_distribuidos.backend_rest.models.entities.User;
 import com.tp_distribuidos.backend_rest.repositories.UserRepository;
 import com.tp_distribuidos.backend_rest.security.JwtService;
 import com.tp_distribuidos.backend_rest.security.SecurityUser;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -65,19 +65,18 @@ public class AuthService {
      * </ol>
      *
      * @param request datos del formulario de registro.
-     * @throws EmailAlreadyExistsException  si el email ya está registrado.
-     * @throws PasswordsDoNotMatchException si las contraseñas no coinciden.
+     * @throws ApiException si el email ya está registrado o las contraseñas no coinciden.
      */
     @Transactional
     public void register(RegisterRequestDTO request) {
         String email = request.email().trim().toLowerCase(Locale.ROOT);
 
         if (userRepository.existsByEmail(email)) {
-            throw new EmailAlreadyExistsException(email);
+            throw new ApiException(HttpStatus.CONFLICT, "Ya existe un usuario registrado con el email: " + email);
         }
 
         if (!request.password().equals(request.confirmPassword())) {
-            throw new PasswordsDoNotMatchException();
+            throw new ApiException(HttpStatus.BAD_REQUEST, "La contraseña y su confirmación no coinciden");
         }
 
         User user = User.of(
