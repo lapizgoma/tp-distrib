@@ -4,45 +4,42 @@ import com.tp_distribuidos.backend_rest.enums.EventType;
 import com.tp_distribuidos.backend_rest.models.entities.Event;
 import com.tp_distribuidos.backend_rest.models.entities.User;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Builder;
-import lombok.Getter;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Getter
-@Builder
-public class EventResponseDTO {
+public record EventResponseDTO(
 
-    @Schema(example = "1")
-    private Long id;
+        @Schema(example = "1")
+        Long id,
 
-    @Schema(example = "Noche de Gala en el Museo")
-    private String title;
+        @Schema(example = "Noche de Gala en el Museo")
+        String title,
 
-    @Schema(example = "Recorrido nocturno guiado con música en vivo.")
-    private String description;
+        @Schema(example = "Recorrido nocturno guiado con música en vivo.")
+        String description,
 
-    @Schema(example = "2026-11-15T20:00:00")
-    private LocalDateTime datetime;
+        @Schema(example = "2026-11-15T20:00:00")
+        LocalDateTime datetime,
 
-    @Schema(example = "120")
-    private Integer duration;
+        @Schema(example = "120")
+        Integer duration,
 
-    @Schema(example = "2")
-    private Long leadCuratorId;
+        @Schema(example = "2")
+        Long leadCuratorId,
 
-    @Schema(example = "Ana Gómez")
-    private String leadCuratorName;
+        @Schema(example = "Ana Gómez")
+        String leadCuratorName,
 
-    @Schema(example = "50")
-    private Integer maximumCapacity;
+        @Schema(example = "50")
+        Integer maximumCapacity,
 
-    @Schema(example = "VISITA_GUIADA")
-    private EventType eventType;
+        @Schema(example = "VISITA_GUIADA")
+        EventType eventType,
 
-    @Schema(description = "Lista de inscriptos; solo se completa para el curador a cargo o un administrador")
-    private List<EventAttendeeDTO> attendees;
+        @Schema(description = "Lista de inscriptos; solo se completa para el curador a cargo o un administrador")
+        List<EventAttendeeDTO> attendees
+) {
 
     public static EventResponseDTO fromEntity(Event event) {
         return fromEntity(event, List.of());
@@ -65,17 +62,16 @@ public class EventResponseDTO {
             }
         }
 
-        return EventResponseDTO.builder()
-                .id(event.getId())
-                .title(event.getTitle())
-                .description(event.getDescription())
-                .datetime(event.getDatetime())
-                .duration(event.getDuration())
-                .leadCuratorId(curatorId)
-                .leadCuratorName(curatorFullName)
-                .maximumCapacity(event.getMaximumCapacity())
-                .eventType(event.getEventType())
-                .attendees(attendees)
-                .build();
+        return new EventResponseDTO(
+                event.getId(),
+                event.getTitle(),
+                event.getDescription(),
+                event.getDatetime(),
+                event.getDuration(),
+                curatorId,
+                curatorFullName,
+                event.getMaximumCapacity(),
+                event.getEventType(),
+                attendees);
     }
 }
