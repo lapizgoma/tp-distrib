@@ -3,11 +3,19 @@ const API_BASE = '/api/rest';
 /** Error de la API que conserva el código HTTP y el mensaje del ProblemDetail. */
 export class ApiError extends Error {
   readonly status: number;
+  readonly fieldErrors?: Record<string, string>;
+  readonly code?: string;
 
-  constructor(message: string, status: number) {
+  constructor(message: string,
+    status: number,
+    fieldErrors?: Record<string, string>,
+    code?: string,
+  ) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.fieldErrors = fieldErrors;
+    this.code = code;
   }
 }
 
@@ -17,19 +25,45 @@ interface RequestOptions {
   signal?: AbortSignal;
 }
 
-function extractMessage(payload: unknown): string | null {
-  if (!payload || typeof payload !== 'object') return null;
 
-  const problem = payload as Record<string, unknown>;
-  const detail = problem.detail ?? problem.message ?? problem.error;
-  if (typeof detail === 'string' && detail.trim()) return detail;
+/** Mensaje en español basado solo en el status HTTP (fallback). */
+function messageForStatus(status: number): string {
+  if (status === 401) return 'Tu sesión expiró o no iniciaste sesión';
+  if (status === 403) return 'No tenés permisos para realizar esta acción';
+  if (status === 404) return 'No encontramos lo que buscabas';
+  if (status === 409) return 'Hay un conflicto con los datos enviados';
+  if (status >= 500) return 'Error del servidor, probá de nuevo más tarde';
+  return 'Error inesperado';
+}
 
-  if (Array.isArray(problem.errors) && problem.errors.length > 0) {
-    const first = problem.errors[0] as Record<string, unknown>;
-    if (typeof first?.defaultMessage === 'string') return first.defaultMessage;
+
+/** Devuelve `errors` solo si es un objeto plano con valores string. */
+function extractFieldErrors(payload: unknown): Record<string, string> | undefined {
+  if (!payload || typeof payload !== 'object') return undefined;
+
+  const errors = (payload as Record<string, unknown>).errors;
+  if (!errors || typeof errors !== 'object' || Array.isArray(errors)) return undefined;
+
+  const result: Record<string, string> = {};
+  for (const [field, msg] of Object.entries(errors)) {
+    if (typeof msg === 'string') result[field] = msg;
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+/** Convierte cualquier respuesta de error en un ApiError. Función pura. */
+export function normalizeError(status: number, payload: unknown): ApiError {
+  let message: string | null = null;
+
+  if (payload && typeof payload === 'object') {
+    const detail = (payload as Record<string, unknown>).detail;
+    if (typeof detail === 'string' && detail.trim()) message = detail;
   }
 
-  return null;
+  return new ApiError(
+    message ?? messageForStatus(status),
+    status,
+    extractFieldErrors(payload),
+  );
 }
 
 /**
@@ -57,10 +91,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     } catch {
       // La respuesta no tenía body JSON (ej. 401/403 sin detalle).
     }
-    throw new ApiError(
-      extractMessage(payload) ?? `Error ${response.status} al comunicarse con el servidor`,
-      response.status,
-    );
+    throw normalizeError(response.status, payload);
   }
 
   if (response.status === 204) return undefined as T;
