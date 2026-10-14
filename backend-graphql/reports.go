@@ -169,6 +169,14 @@ var reportField = &graphql.Field{
 		},
 	},
 	Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+		user, isValidUser := UserFromContext(p.Context)
+		if !isValidUser {
+			return nil, ErrUnauthenticated
+		}
+		if user.Role != "ADMINISTRADOR" && user.Role != "CURADOR" {
+			return nil, ErrForbidden
+		}
+
 		rows, err := fetchReportDataFromDatabase(p.Context, p.Args)
 		if err != nil {
 			return nil, err

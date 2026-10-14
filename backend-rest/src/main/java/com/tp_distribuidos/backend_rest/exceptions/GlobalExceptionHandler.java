@@ -4,6 +4,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -17,53 +18,25 @@ import java.util.Map;
  * <p>Centraliza la traducción de excepciones a respuestas HTTP siguiendo el
  * estándar RFC 7807 ({@link ProblemDetail}), devolviéndolo directamente para
  * que Spring lo serialice con el content type {@code application/problem+json}.</p>
+ *
+ * <p>Todas las excepciones de negocio heredan de {@link ApiException}, por lo
+ * que un único manejador las resuelve conservando el estado HTTP y el mensaje.
+ * El manejador genérico garantiza que cualquier error no contemplado también
+ * responda como {@code ProblemDetail}.</p>
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     /**
-     * Maneja el intento de registrar un email ya existente.
+     * Maneja todas las excepciones de negocio derivadas de {@link ApiException},
+     * preservando el estado HTTP y el mensaje definidos en la excepción.
      *
      * @param ex excepción lanzada por la capa de servicio.
-     * @return un {@link ProblemDetail} con estado {@code 409 Conflict}.
+     * @return un {@link ProblemDetail} con el estado y el detalle del error.
      */
-    @ExceptionHandler(EmailAlreadyExistsException.class)
-    public ProblemDetail handleEmailAlreadyExists(EmailAlreadyExistsException ex) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
-    }
-
-    /**
-     * Maneja la validación de contraseña y confirmación fallida.
-     *
-     * @param ex excepción lanzada por la capa de servicio.
-     * @return un {@link ProblemDetail} con estado {@code 400 Bad Request}.
-     */
-    @ExceptionHandler(PasswordsDoNotMatchException.class)
-    public ProblemDetail handlePasswordsDoNotMatch(PasswordsDoNotMatchException ex) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
-    }
-
-    /**
-     * Maneja la búsqueda de una obra inexistente.
-     *
-     * @param ex excepción lanzada por la capa de servicio.
-     * @return un {@link ProblemDetail} con estado {@code 404 Not Found}.
-     */
-    @ExceptionHandler(WorkNotFoundException.class)
-    public ProblemDetail handleWorkNotFound(WorkNotFoundException ex) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
-    }
-
-    /**
-     * Maneja la referencia a un artista inexistente al crear o actualizar una
-     * obra.
-     *
-     * @param ex excepción lanzada por la capa de servicio.
-     * @return un {@link ProblemDetail} con estado {@code 404 Not Found}.
-     */
-    @ExceptionHandler(ArtistNotFoundException.class)
-    public ProblemDetail handleArtistNotFound(ArtistNotFoundException ex) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+    @ExceptionHandler(ApiException.class)
+    public ProblemDetail handleApiException(ApiException ex) {
+        return ProblemDetail.forStatusAndDetail(ex.getStatus(), ex.getMessage());
     }
 
     /**
@@ -104,38 +77,44 @@ public class GlobalExceptionHandler {
 
         return problemDetail;
     }
-    /**
-     * Maneja errores en las reglas de negocio de inscripciones a eventos
-     * (cupo lleno o usuario ya inscripto).
-     *
-     * @param ex excepción lanzada por la capa de servicio.
-     * @return un {@link ProblemDetail} con estado {@code 400 Bad Request}.
-     */
-    @ExceptionHandler(EventRegistrationException.class)
-    public ProblemDetail handleEventRegistrationException(EventRegistrationException ex) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
-    }
 
     /**
-     * Maneja la búsqueda de recursos inexistentes (eventos, usuarios, etc.).
+     * Maneja los conflictos de integridad de datos (por ejemplo, un filtro
+     * guardado con un nombre ya existente para el mismo usuario).
      *
-     * @param ex excepción lanzada al no encontrar la entidad solicitada.
-     * @return un {@link ProblemDetail} con estado {@code 404 Not Found}.
+     * @param ex excepción de integridad lanzada por el repositorio.
+     * @return un {@link ProblemDetail} con estado {@code 409 Conflict}.
      */
-    @ExceptionHandler(jakarta.persistence.EntityNotFoundException.class)
-    public ProblemDetail handleEntityNotFound(jakarta.persistence.EntityNotFoundException ex) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
-    }
-
-    @ExceptionHandler(SavedEventFilterNotFoundException.class)
-    public ProblemDetail handleSavedEventFilterNotFound(SavedEventFilterNotFoundException ex) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
-    }
-
     @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
     public ProblemDetail handleDataIntegrityViolation(org.springframework.dao.DataIntegrityViolationException ex) {
         return ProblemDetail.forStatusAndDetail(
                 HttpStatus.CONFLICT,
                 "Ya tienes un filtro guardado con ese nombre o los datos entran en conflicto.");
+    }
+
+    /**
+     * Manejador de último recurso para cualquier excepción no contemplada.
+     *
+     * <p>Si la excepción ya es un {@link ErrorResponse} de Spring (por ejemplo,
+     * {@code NoResourceFoundException} o {@code HttpRequestMethodNotSupportedException}),
+     * se respeta su estado HTTP y su detalle. En caso contrario, se responde
+     * {@code 500 Internal Server Error} con un mensaje genérico.</p>
+     *
+     * @param ex excepción no manejada específicamente.
+     * @return un {@link ProblemDetail} con el estado y el detalle correspondientes.
+     */
+    @ExceptionHandler(Exception.class)
+    public ProblemDetail handleGeneric(Exception ex) {
+        if (ex instanceof ErrorResponse errorResponse) {
+            String detail = errorResponse.getBody().getDetail();
+            if (detail == null || detail.isBlank()) {
+                detail = errorResponse.getStatusCode().toString();
+            }
+            return ProblemDetail.forStatusAndDetail(errorResponse.getStatusCode(), detail);
+        }
+
+        return ProblemDetail.forStatusAndDetail(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "Ocurrió un error inesperado en el servidor");
     }
 }
