@@ -6,7 +6,8 @@ export class ApiError extends Error {
   readonly fieldErrors?: Record<string, string>;
   readonly code?: string;
 
-  constructor(message: string,
+  constructor(
+    message: string,
     status: number,
     fieldErrors?: Record<string, string>,
     code?: string,
@@ -19,6 +20,8 @@ export class ApiError extends Error {
   }
 }
 
+
+
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   body?: unknown;
@@ -26,7 +29,9 @@ interface RequestOptions {
 }
 
 
-/** Mensaje en español basado solo en el status HTTP (fallback). */
+
+
+/** Mensaje en español basado solo en el status HTTP (fallback) */
 function messageForStatus(status: number): string {
   if (status === 401) return 'Tu sesión expiró o no iniciaste sesión';
   if (status === 403) return 'No tenés permisos para realizar esta acción';
@@ -37,7 +42,9 @@ function messageForStatus(status: number): string {
 }
 
 
-/** Devuelve `errors` solo si es un objeto plano con valores string. */
+
+
+/** Devuelve `errors` solo si es un objeto plano con valores string */
 function extractFieldErrors(payload: unknown): Record<string, string> | undefined {
   if (!payload || typeof payload !== 'object') return undefined;
 
@@ -50,7 +57,10 @@ function extractFieldErrors(payload: unknown): Record<string, string> | undefine
   }
   return Object.keys(result).length > 0 ? result : undefined;
 }
-/** Convierte cualquier respuesta de error en un ApiError. Función pura. */
+
+
+
+/** Convierte cualquier respuesta de error en un ApiError */
 export function normalizeError(status: number, payload: unknown): ApiError {
   let message: string | null = null;
 
@@ -66,16 +76,14 @@ export function normalizeError(status: number, payload: unknown): ApiError {
   );
 }
 
+
+
 /**
  * Cliente HTTP único contra el backend REST (a través del proxy /api).
  * Centraliza headers, serialización JSON y el mapeo de errores.
  */
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-
-  // TODO(auth): adjuntar el token de la sesión cuando el auth esté implementado:
-  //   const token = useAuthStore.getState().token;
-  //   if (token) headers.Authorization = `Bearer ${token}`;
 
   const response = await fetch(`${API_BASE}${path}`, {
     method: options.method ?? 'GET',
@@ -89,7 +97,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     try {
       payload = await response.json();
     } catch {
-      // La respuesta no tenía body JSON (ej. 401/403 sin detalle).
+      // La respuesta no tenía body JSON (ej. 401/403 sin detalle)
     }
     throw normalizeError(response.status, payload);
   }
