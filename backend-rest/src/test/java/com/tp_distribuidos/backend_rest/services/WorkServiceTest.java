@@ -103,10 +103,10 @@ class WorkServiceTest {
 
         WorkDetailDTO result = workService.getWorkById(WORK_ID);
 
-        assertThat(result.getId()).isEqualTo(WORK_ID);
-        assertThat(result.getTitle()).isEqualTo("La noche estrellada");
-        assertThat(result.getArtist().getId()).isEqualTo(ARTIST_ID);
-        assertThat(result.getArtist().getName()).isEqualTo("Vincent van Gogh");
+        assertThat(result.id()).isEqualTo(WORK_ID);
+        assertThat(result.title()).isEqualTo("La noche estrellada");
+        assertThat(result.artist().id()).isEqualTo(ARTIST_ID);
+        assertThat(result.artist().name()).isEqualTo("Vincent van Gogh");
     }
 
     @Test
@@ -132,10 +132,10 @@ class WorkServiceTest {
 
         WorkDetailDTO result = workService.createWork(buildRequest(ARTIST_ID));
 
-        assertThat(result.getId()).isEqualTo(WORK_ID);
-        assertThat(result.getTitle()).isEqualTo("La noche estrellada");
-        assertThat(result.getAvailability()).isEqualTo(WorkAvailability.EN_EXHIBICION);
-        assertThat(result.getArtist().getId()).isEqualTo(ARTIST_ID);
+        assertThat(result.id()).isEqualTo(WORK_ID);
+        assertThat(result.title()).isEqualTo("La noche estrellada");
+        assertThat(result.availability()).isEqualTo(WorkAvailability.EN_EXHIBICION);
+        assertThat(result.artist().id()).isEqualTo(ARTIST_ID);
         verify(artistRepository).findById(ARTIST_ID);
         verify(workRepository).save(any(Work.class));
     }
@@ -161,7 +161,7 @@ class WorkServiceTest {
 
         WorkDetailDTO result = workService.updateWork(WORK_ID, buildRequest(ARTIST_ID));
 
-        assertThat(result.getId()).isEqualTo(WORK_ID);
+        assertThat(result.id()).isEqualTo(WORK_ID);
         assertThat(work.getArtist()).isSameAs(newArtist);
         assertThat(work.getTitle()).isEqualTo("La noche estrellada");
         assertThat(work.getAvailability()).isEqualTo(WorkAvailability.EN_EXHIBICION);

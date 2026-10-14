@@ -79,7 +79,7 @@ public class WorkController {
         WorkDetailDTO created = workService.createWork(request);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
-                .buildAndExpand(created.getId())
+                .buildAndExpand(created.id())
                 .toUri();
         return ResponseEntity.created(location).body(created);
     }

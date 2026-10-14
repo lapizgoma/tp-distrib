@@ -1,25 +1,17 @@
 package com.tp_distribuidos.backend_rest.dtos;
 
 import com.tp_distribuidos.backend_rest.models.entities.Comment;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class CommentResponseDTO {
-
-    private Long id;
-    private Long workId;
-    private Long userId;
-    private String authorName;
-    private String text;
-    private LocalDateTime date;
+public record CommentResponseDTO(
+        Long id,
+        Long workId,
+        Long userId,
+        String authorName,
+        String text,
+        LocalDateTime date
+) {
 
     public static CommentResponseDTO fromEntity(Comment comment) {
         String author = null;
@@ -32,13 +24,12 @@ public class CommentResponseDTO {
             }
         }
 
-        return CommentResponseDTO.builder()
-                .id(comment.getId())
-                .workId(comment.getWork() != null ? comment.getWork().getId() : null)
-                .userId(comment.getUser() != null ? comment.getUser().getId() : null)
-                .authorName(author)
-                .text(comment.getText())
-                .date(comment.getDate())
-                .build();
+        return new CommentResponseDTO(
+                comment.getId(),
+                comment.getWork() != null ? comment.getWork().getId() : null,
+                comment.getUser() != null ? comment.getUser().getId() : null,
+                author,
+                comment.getText(),
+                comment.getDate());
     }
 }

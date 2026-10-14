@@ -22,16 +22,16 @@ class WorkDetailDTOTest {
 
         WorkDetailDTO dto = WorkDetailDTO.fromEntity(work);
 
-        assertThat(dto.getId()).isEqualTo(WORK_ID);
-        assertThat(dto.getTitle()).isEqualTo("La noche estrellada");
-        assertThat(dto.getImageUrl()).isEqualTo("https://museo.org/obras/noche-estrellada.jpg");
-        assertThat(dto.getCreationYear()).isEqualTo(1889);
-        assertThat(dto.getTechnique()).isEqualTo(WorkTechnique.OLEO);
-        assertThat(dto.getDimensions()).isEqualTo("73.7 cm x 92.1 cm");
-        assertThat(dto.getEra()).isEqualTo(WorkEra.IMPRESIONISMO);
-        assertThat(dto.getDescription()).isEqualTo("Representa la vista nocturna...");
-        assertThat(dto.getLocation()).isEqualTo(WorkLocation.SALA_4_ARTE_MODERNO);
-        assertThat(dto.getAvailability()).isEqualTo(WorkAvailability.EN_EXHIBICION);
+        assertThat(dto.id()).isEqualTo(WORK_ID);
+        assertThat(dto.title()).isEqualTo("La noche estrellada");
+        assertThat(dto.imageUrl()).isEqualTo("https://museo.org/obras/noche-estrellada.jpg");
+        assertThat(dto.creationYear()).isEqualTo(1889);
+        assertThat(dto.technique()).isEqualTo(WorkTechnique.OLEO);
+        assertThat(dto.dimensions()).isEqualTo("73.7 cm x 92.1 cm");
+        assertThat(dto.era()).isEqualTo(WorkEra.IMPRESIONISMO);
+        assertThat(dto.description()).isEqualTo("Representa la vista nocturna...");
+        assertThat(dto.location()).isEqualTo(WorkLocation.SALA_4_ARTE_MODERNO);
+        assertThat(dto.availability()).isEqualTo(WorkAvailability.EN_EXHIBICION);
     }
 
     @Test
@@ -40,10 +40,10 @@ class WorkDetailDTOTest {
 
         WorkDetailDTO dto = WorkDetailDTO.fromEntity(work);
 
-        assertThat(dto.getArtist()).isNotNull();
-        assertThat(dto.getArtist().getId()).isEqualTo(ARTIST_ID);
-        assertThat(dto.getArtist().getName()).isEqualTo("Vincent van Gogh");
-        assertThat(dto.getArtist().getBiography()).isEqualTo("Pintor neerlandes.");
+        assertThat(dto.artist()).isNotNull();
+        assertThat(dto.artist().id()).isEqualTo(ARTIST_ID);
+        assertThat(dto.artist().name()).isEqualTo("Vincent van Gogh");
+        assertThat(dto.artist().biography()).isEqualTo("Pintor neerlandes.");
     }
 
     @Test
@@ -52,7 +52,7 @@ class WorkDetailDTOTest {
 
         WorkDetailDTO dto = WorkDetailDTO.fromEntity(work);
 
-        assertThat(dto.getArtist()).isNull();
+        assertThat(dto.artist()).isNull();
     }
 
     private Work buildWork(Artist artist) {
