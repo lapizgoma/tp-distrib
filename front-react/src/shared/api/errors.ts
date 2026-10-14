@@ -1,6 +1,4 @@
-const API_BASE = '/api/rest';
-
-/** Error de la API que conserva el código HTTP y el mensaje del ProblemDetail. */
+/** Error de la API unificado: status HTTP, mensaje legible y detalles opcionales. */
 export class ApiError extends Error {
   readonly status: number;
   readonly fieldErrors?: Record<string, string>;
@@ -20,18 +18,7 @@ export class ApiError extends Error {
   }
 }
 
-
-
-interface RequestOptions {
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
-  body?: unknown;
-  signal?: AbortSignal;
-}
-
-
-
-
-/** Mensaje en español basado solo en el status HTTP (fallback) */
+/** Mensaje en español basado solo en el status HTTP (fallback). */
 function messageForStatus(status: number): string {
   if (status === 401) return 'Tu sesión expiró o no iniciaste sesión';
   if (status === 403) return 'No tenés permisos para realizar esta acción';
@@ -41,10 +28,7 @@ function messageForStatus(status: number): string {
   return 'Error inesperado';
 }
 
-
-
-
-/** Devuelve `errors` solo si es un objeto plano con valores string */
+/** Devuelve `errors` solo si es un objeto plano con valores string. */
 function extractFieldErrors(payload: unknown): Record<string, string> | undefined {
   if (!payload || typeof payload !== 'object') return undefined;
 
@@ -57,8 +41,6 @@ function extractFieldErrors(payload: unknown): Record<string, string> | undefine
   }
   return Object.keys(result).length > 0 ? result : undefined;
 }
-
-
 
 /** Convierte cualquier respuesta de error en un ApiError */
 export function normalizeError(status: number, payload: unknown): ApiError {
@@ -74,36 +56,4 @@ export function normalizeError(status: number, payload: unknown): ApiError {
     status,
     extractFieldErrors(payload),
   );
-}
-
-
-
-/**
- * Cliente HTTP único contra el backend REST (a través del proxy /api).
- * Centraliza headers, serialización JSON y el mapeo de errores.
- */
-export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-
-  const response = await fetch(`${API_BASE}${path}`, {
-    method: options.method ?? 'GET',
-    headers,
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-    signal: options.signal,
-  });
-
-  if (!response.ok) {
-    let payload: unknown = null;
-    try {
-      payload = await response.json();
-    } catch {
-      // La respuesta no tenía body JSON (ej. 401/403 sin detalle)
-    }
-    throw normalizeError(response.status, payload);
-  }
-
-  if (response.status === 204) return undefined as T;
-
-  const text = await response.text();
-  return (text ? JSON.parse(text) : undefined) as T;
 }

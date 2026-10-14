@@ -4,7 +4,7 @@ import type {
   EventRequestDTO,
   EventResponseDTO,
 } from '../types/events.types';
-import { apiRequest } from '../../../shared/api/http';
+import { apiRequest } from '@/shared/api/rest';
 
 function buildQuery(filters: EventFilters = {}): string {
   const params = new URLSearchParams();
