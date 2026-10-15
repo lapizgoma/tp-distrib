@@ -1,4 +1,4 @@
-import { AppRouter } from './AppRouter';
+import { AppRouter } from './router';
 import { Toaster } from '@/components/ui/sonner';
 
 export function App() {
