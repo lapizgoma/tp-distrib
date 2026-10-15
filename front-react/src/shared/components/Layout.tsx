@@ -1,6 +1,9 @@
-import { Link, NavLink, Outlet } from 'react-router-dom';
-import { Landmark } from 'lucide-react';
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Landmark, LogIn, LogOut } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from 'cn';
+import { Button } from '@/components/ui/button';
+import { isTokenValid, useAuthStore } from '@/shared/store/authStore';
 
 const navItems = [
   { to: '/', label: 'Inicio', end: true },
@@ -10,6 +13,18 @@ const navItems = [
 ];
 
 export function Layout() {
+  const navigate = useNavigate();
+  const token = useAuthStore((state) => state.token);
+  const logout = useAuthStore((state) => state.logout);
+
+  const isLogged = isTokenValid(token);
+
+  const handleLogout = () => {
+    logout();
+    toast.success('Sesión cerrada');
+    navigate('/login');
+  };
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur supports-backdrop-filter:bg-background/70">
@@ -39,7 +54,17 @@ export function Layout() {
             </NavLink>
           ))}
 
-          {/* TODO(auth): reemplazar por el menú de sesión (login / perfil según rol). */}
+          {isLogged ? (
+            <Button variant="outline" size="sm" onClick={handleLogout}>
+              <LogOut className="size-4" />
+              Cerrar sesión
+            </Button>
+          ) : (
+            <Button size="sm" onClick={() => navigate('/login')}>
+              <LogIn className="size-4" />
+              Iniciar sesión
+            </Button>
+          )}
         </nav>
       </header>
 
