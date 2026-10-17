@@ -44,7 +44,7 @@ export async function getWorks(filters: WorkFilters = {}, signal?: AbortSignal):
 
   // Limpiamos variables vacías para que GraphQL no envíe strings vacíos
   const variables = Object.fromEntries(
-    Object.entries(filters).filter(([_, value]) => value !== undefined && value !== '')
+    Object.entries(filters).filter((entry) => entry[1] !== undefined && entry[1] !== '')
   );
 
   const response = await fetch(GRAPHQL_URL, {
