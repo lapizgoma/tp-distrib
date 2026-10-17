@@ -26,12 +26,26 @@ export function useWorks(initialFilters: WorkFilters = {}) {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetchWorks(controller.signal);
+    let active = true;
+
+    getWorks(filters, controller.signal)
+      .then((data) => {
+        if (active) setWorks(data);
+      })
+      .catch((err: unknown) => {
+        if (active && err instanceof Error && err.name !== 'AbortError') {
+          setError(err.message || 'Error al cargar las obras');
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
 
     return () => {
+      active = false;
       controller.abort();
     };
-  }, [fetchWorks]);
+  }, [filters]);
 
   const updateFilters = (newFilters: Partial<WorkFilters>) => {
     setFilters((prev) => ({ ...prev, ...newFilters }));

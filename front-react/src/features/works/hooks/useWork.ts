@@ -31,8 +31,34 @@ export function useWork(workId: string | undefined) {
   }, [workId]);
 
   useEffect(() => {
-    fetchWork();
-  }, [fetchWork]);
+    let active = true;
+
+    if (!workId) return;
+
+    getWorks()
+      .then((allWorks) => {
+        if (!active) return;
+        const found = allWorks.find((w) => String(w.id) === String(workId));
+        if (found) {
+          setWork(found);
+        } else {
+          setError('Obra no encontrada');
+        }
+      })
+      .catch((err: unknown) => {
+        if (!active) return;
+        if (err instanceof Error) {
+          setError(err.message || 'Error al cargar la obra');
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [workId]);
 
   return { work, loading, error, refetch: fetchWork };
 }
