@@ -1,5 +1,4 @@
 import path from 'path'
-// @ts-expect-error reactCompilerPreset es exportado en tiempo de ejecución por el plugin
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
 import tailwindcss from '@tailwindcss/vite'
@@ -12,7 +11,7 @@ export default defineConfig({
     tailwindcss(),
   ],
   resolve: {
-    alias: { '@': path.resolve(import.meta.dirname, './src') },
+     alias: { '@': path.resolve(import.meta.dirname, './src') },
   },
   server: {
     proxy: {

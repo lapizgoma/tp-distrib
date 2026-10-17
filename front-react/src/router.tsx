@@ -19,8 +19,13 @@ export function AppRouter() {
 
                     {/* Feature: Eventos e Inscripciones */}
                     <Route path="eventos" element={<EventsListView />} />
-                    <Route path="eventos/mis-filtros" element={<SavedFiltersView />} />
                     <Route path="eventos/:id" element={<EventDetailView />} />
+
+
+                    {/* Cualquier usuario con sesión */}
+                    <Route element={<RequireRole />}>
+                        <Route path="eventos/mis-filtros" element={<SavedFiltersView />} />
+                    </Route>
 
                     {/* Solo CURADOR y ADMINISTRADOR */}
                     <Route element={<RequireRole roles={['CURADOR', 'ADMINISTRADOR']} />}>
