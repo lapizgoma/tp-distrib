@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package museum.works;
+
+// Domain Models
+message Work {
+  int64 id = 1;
+  string title = 2;
+  int64 artist_id = 3;
+  string artist_name = 4;
+  string image_url = 5;
+  int32 creation_year = 6;
+  string technique = 7;
+  string dimensions = 8;
+  string era = 9;
+  string topic = 10;
+  string description = 11;
+  string location = 12;
+  string availability = 13;
+  int32 estimated_duration_minutes = 14;
+}
+
+// Req 1: Personalized Tour
+message TourCriteriaRequest {
+  repeated string topics = 1;
+  repeated string eras = 2;
+  repeated string techniques = 3;
+  int32 max_duration_minutes = 4;
+  int32 max_works_count = 5;
+}
+
+message WorkListResponse {
+  repeated Work works = 1;
+}
+
+// Req 2: Work Comparison
+message CompareWorksRequest {
+  repeated int64 work_ids = 1;
+}
+
+// Req 3: Work Recommendations
+message RecommendationCriteriaRequest {
+  repeated string favorite_themes = 1;
+  repeated string favorite_techniques = 2;
+  repeated int64 viewed_work_ids = 3;
+  int32 limit = 4;
+}
+
+// Req 4: Advanced Exploration
+message ExplorationByEraRequest {
+  string era = 1;
+}
+
+message ExplorationWorksResponse {
+  string era = 1;
+  repeated Work works = 2;
+  repeated string associated_artists = 3;
+}
+
+// Service Definition
+service WorkService {
+  // 1. Tour Generation
+  rpc SearchWorksForTour (TourCriteriaRequest) returns (WorkListResponse);
+  
+  // 2. Comparison
+  rpc GetWorksForComparison (CompareWorksRequest) returns (WorkListResponse);
+  
+  // 3. Recommendations
+  rpc GetRecommendedWorks (RecommendationCriteriaRequest) returns (WorkListResponse);
+  
+  // 4. Advanced Exploration
+  rpc GetWorksAndArtistsByEra (ExplorationByEraRequest) returns (ExplorationWorksResponse);
+}
