@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package museum.users;
+
+// Req 1: Personalized Tour - Req 4: Advanced Exploration
+message UserProfileRequest {
+    int64 user_id = 1;
+}
+
+message UserPreferences {
+    repeated string favorite_topics = 1;
+    repeated string favorite_techniques = 2;
+    repeated string favorite_eras = 3;
+}
+
+message UserProfileResponse {
+    int64 user_id = 1;
+    string email = 2;
+    string first_name = 3;
+    string last_name = 4;
+    string role = 5;
+    UserPreferences preferences = 6;
+    repeated int64 interacted_work_ids = 7;
+}
+
+// Service Definition
+service UserService {
+    rpc GetUserProfile (UserProfileRequest) returns (UserProfileResponse);
+}
