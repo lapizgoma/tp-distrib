@@ -121,7 +121,7 @@ class EventServiceTest {
 
         EventResponseDTO result = eventService.getEventById(EVENT_ID);
 
-        assertThat(result.attendees()).isEmpty();
+        assertThat(result.attendees()).isNull();
         verify(registrationRepository, never()).findByEventIdWithUser(any());
     }
 
@@ -134,7 +134,7 @@ class EventServiceTest {
 
         EventResponseDTO result = eventService.getEventById(EVENT_ID);
 
-        assertThat(result.attendees()).isEmpty();
+        assertThat(result.attendees()).isNull();
         verify(registrationRepository, never()).findByEventIdWithUser(any());
     }
 
@@ -147,7 +147,7 @@ class EventServiceTest {
 
         EventResponseDTO result = eventService.getEventById(EVENT_ID);
 
-        assertThat(result.attendees()).isEmpty();
+        assertThat(result.attendees()).isNull();
         verify(registrationRepository, never()).findByEventIdWithUser(any());
     }
 
@@ -160,7 +160,7 @@ class EventServiceTest {
 
         EventResponseDTO result = eventService.getEventById(EVENT_ID);
 
-        assertThat(result.attendees()).isEmpty();
+        assertThat(result.attendees()).isNull();
     }
 
     @Test
@@ -172,7 +172,7 @@ class EventServiceTest {
 
         EventResponseDTO result = eventService.getEventById(EVENT_ID);
 
-        assertThat(result.attendees()).isEmpty();
+        assertThat(result.attendees()).isNull();
     }
 
     @Test

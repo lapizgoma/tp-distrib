@@ -56,12 +56,12 @@ class EventResponseDTOTest {
     }
 
     @Test
-    void usesEmptyAttendeesWhenBuiltWithoutThem() {
+    void usesNullAttendeesWhenBuiltWithoutThem() {
         Event event = buildEvent(buildCurator("Ana", "Gomez"));
 
         EventResponseDTO dto = EventResponseDTO.fromEntity(event);
 
-        assertThat(dto.attendees()).isEmpty();
+        assertThat(dto.attendees()).isNull();
     }
 
     @Test
