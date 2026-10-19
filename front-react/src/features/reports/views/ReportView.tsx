@@ -1,11 +1,13 @@
 import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { BarChart3, Info } from 'lucide-react';
+import { BarChart3, Download, Info, Loader2 } from 'lucide-react';
 import { EVENT_TYPES } from '@/features/events/types/events.types';
 import type { EventType } from '@/features/events/types/events.types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useReport } from '../hooks/useReport';
+import { useReportDownload } from '../hooks/useReportDownload';
 import { ReportFiltersBar } from '../components/ReportFiltersBar';
 import { ReportTable } from '../components/ReportTable';
 import {
@@ -41,6 +43,7 @@ export function ReportView() {
       : null;
 
   const { groups, loading, error } = useReport(filters, !dateError);
+  const { download, downloading, error: downloadError } = useReportDownload();
 
   const handleFiltersChange = (next: ReportFilters) => {
     const params = new URLSearchParams();
@@ -82,13 +85,26 @@ export function ReportView() {
         dateError={dateError}
       />
 
-      {/* Resumen */}
-      {!loading && !error && !dateError && groups.length > 0 && (
+      {/* resumen y exportación */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          {formatInteger(totalEvents)} evento(s) y {formatInteger(totalRegistrants)} inscripto(s) en
-          total.
+          {!loading && !error && !dateError && groups.length > 0
+            ? `${formatInteger(totalEvents)} evento(s) y ${formatInteger(totalRegistrants)} inscripto(s) en total.`
+            : ''}
         </p>
-      )}
+        
+        <div className="flex flex-col items-end gap-1">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={Boolean(dateError) || downloading}
+            onClick={() => download(filters)}
+          >
+            {downloading ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+            {downloading ? 'Descargando…' : 'Descargar Excel'}
+          </Button>
+        </div>
+      </div>
 
       {groupsByMonth && !dateError && (
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -96,6 +112,13 @@ export function ReportView() {
           El agrupamiento por mes no distingue el año: los eventos del mismo mes de años distintos se
           suman en un mismo grupo.
         </p>
+      )}
+
+      {downloadError && (
+        <Alert variant="destructive">
+          <AlertTitle>No pudimos descargar el reporte</AlertTitle>
+          <AlertDescription>{downloadError}</AlertDescription>
+        </Alert>
       )}
 
       {error && (
