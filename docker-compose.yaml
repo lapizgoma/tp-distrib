@@ -24,9 +24,9 @@ services:
       timeout: 5s
       retries: 5
 
-  # Servidor Backend REST (Java)
+  # Servidor Backend REST (Java) - Perfil: rest
   backend-rest:
-    profiles: ["app", "full"]
+    profiles: ["rest", "full"]
     build:
       context: ./backend-rest
       dockerfile: Dockerfile
@@ -49,9 +49,9 @@ services:
       mysql:
         condition: service_healthy
 
-  # Servidor Backend GraphQL (Go)
+  # Servidor Backend GraphQL (Go) - Perfil: graphql
   backend-graphql:
-    profiles: ["app", "full"]
+    profiles: ["graphql", "full"]
     build:
       context: ./backend-graphql
       dockerfile: Dockerfile
@@ -74,9 +74,9 @@ services:
       mysql:
         condition: service_healthy
 
-  # Servidor Proxy (Go)
+  # Servidor Proxy (Go) - Perfil: proxy (requiere rest y graphql)
   backend-proxy:
-    profiles: ["app", "full"]
+    profiles: ["proxy", "full"]
     build:
       context: ./backend-proxy
       dockerfile: Dockerfile
@@ -92,9 +92,9 @@ services:
       - backend-rest
       - backend-graphql
 
-  # Servidor gRPC Works (Python)
+  # Servidor gRPC Works (Python) - Perfil: grpc
   grpc-works:
-    profiles: ["app", "full"]
+    profiles: ["grpc", "full"]
     build:
       context: ./grpc-works
       dockerfile: Dockerfile
@@ -116,9 +116,9 @@ services:
       mysql:
         condition: service_healthy
 
-  # Servidor gRPC Events (Python)
+  # Servidor gRPC Events (Python) - Perfil: grpc
   grpc-events:
-    profiles: ["app", "full"]
+    profiles: ["grpc", "full"]
     build:
       context: ./grpc-events
       dockerfile: Dockerfile
@@ -139,9 +139,9 @@ services:
       mysql:
         condition: service_healthy
 
-  # Servidor gRPC Users (Python)
+  # Servidor gRPC Users (Python) - Perfil: grpc
   grpc-users:
-    profiles: ["app", "full"]
+    profiles: ["grpc", "full"]
     build:
       context: ./grpc-users
       dockerfile: Dockerfile
