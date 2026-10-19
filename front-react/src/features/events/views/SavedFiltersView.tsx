@@ -20,8 +20,6 @@ import {
 
 /**
  * Gestión de filtros favoritos de eventos (/api/rest/filters).
- *
- * TODO(auth): vista protegida para usuarios con rol VISITANTE autenticados.
  */
 export function SavedFiltersView() {
   const navigate = useNavigate();

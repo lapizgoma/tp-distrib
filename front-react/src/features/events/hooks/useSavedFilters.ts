@@ -20,9 +20,6 @@ interface UseSavedFiltersReturn {
 
 /**
  * CRUD de filtros favoritos de eventos (/api/rest/filters).
- *
- * TODO(auth): todos los endpoints de filtros requieren sesión iniciada
- * (rol VISITANTE). La vista /eventos/mis-filtros debe protegerse.
  */
 export function useSavedFilters(): UseSavedFiltersReturn {
   const [filters, setFilters] = useState<SavedFilterResponseDTO[]>([]);

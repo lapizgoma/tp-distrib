@@ -12,10 +12,6 @@ interface UseEventMutationsReturn {
 
 /**
  * Operaciones de ABM de eventos (POST/PUT/DELETE en /api/rest/events).
- *
- * TODO(auth): las tres operaciones quedan restringidas a los roles CURADOR y
- * ADMINISTRADOR en el backend (@PreAuthorize). Acá habrá que bloquear el
- * acceso desde el front una vez que el auth esté implementado.
  */
 export function useEventMutations(): UseEventMutationsReturn {
   const [submitting, setSubmitting] = useState(false);
