@@ -14,6 +14,8 @@
 -- conviene resetear el volumen: docker compose down -v
 -- ============================================================
 
+SET NAMES utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+
 INSERT IGNORE INTO users (email, password, role, first_name, last_name) VALUES
     ('admin@museo.com',     '$2a$10$aC.44NUVhz8EwSgMwPmdIeIHiIx2bhRitCTIleqVXRdBEM7fLtPJy', 'ADMINISTRADOR', 'Admin',     'Sistema'),
     ('curador@museo.com',   '$2a$10$wyWKgq9/Jz9jOn3CmDyuu.fbirsX1KZGyP4ShWyFZV2Gr3ey4N9Re', 'CURADOR',       'Curador',   'Sistema'),
