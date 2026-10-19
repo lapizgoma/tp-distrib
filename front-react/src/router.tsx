@@ -6,6 +6,7 @@ import { EventDetailView } from "@/features/events/views/EventDetailView";
 import { EventFormView } from "@/features/events/views/EventFormView";
 import { SavedFiltersView } from "@/features/events/views/SavedFiltersView";
 import { LoginView } from "@/features/auth/views/LoginView";
+import { RegisterView } from "@/features/auth/views/RegisterView";
 import { WorksListView } from "@/features/works/views/WorksListView";
 import { WorkDetailView } from "@/features/works/views/WorkDetailView";
 
@@ -18,6 +19,7 @@ export function AppRouter() {
 
                     {/* Feature: Autenticación */}
                     <Route path="login" element={<LoginView />} />
+                    <Route path="register" element={<RegisterView />} />
 
                     {/* Feature: Eventos e Inscripciones */}
                     <Route path="eventos" element={<EventsListView />} />
