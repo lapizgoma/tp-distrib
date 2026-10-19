@@ -1,5 +1,7 @@
 -- Museo Virtual - Hito 2 Database Extension
 
+SET NAMES utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+
 -- 1. Extend 'works' table
 ALTER TABLE works 
     ADD COLUMN estimated_duration_minutes INT NOT NULL DEFAULT 10,

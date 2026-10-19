@@ -5,9 +5,13 @@ services:
     image: mysql:8
     container_name: museo-mysql
     restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
       MYSQL_DATABASE: ${DB_NAME:-museo_virtual}
+      LANG: C.UTF-8
     ports:
       - "${DB_PORT:-3306}:3306"
     volumes:

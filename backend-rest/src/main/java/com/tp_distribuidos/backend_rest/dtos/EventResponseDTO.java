@@ -37,15 +37,22 @@ public record EventResponseDTO(
         @Schema(example = "VISITA_GUIADA")
         EventType eventType,
 
-        @Schema(description = "Lista de inscriptos; solo se completa para el curador a cargo o un administrador")
-        List<EventAttendeeDTO> attendees
+        @Schema(description = "Lista de inscriptos; null si el viewer no tiene permiso, [] si tiene permiso y no hay inscriptos")
+        List<EventAttendeeDTO> attendees,
+
+        @Schema(description = "true si el usuario autenticado está inscripto al evento; null para anónimos", example = "false")
+        Boolean isRegistered
 ) {
 
     public static EventResponseDTO fromEntity(Event event) {
-        return fromEntity(event, List.of());
+        return fromEntity(event, null, null);
     }
 
     public static EventResponseDTO fromEntity(Event event, List<EventAttendeeDTO> attendees) {
+        return fromEntity(event, attendees, null);
+    }
+
+    public static EventResponseDTO fromEntity(Event event, List<EventAttendeeDTO> attendees, Boolean isRegistered) {
         String curatorFullName = null;
         Long curatorId = null;
 
@@ -72,6 +79,7 @@ public record EventResponseDTO(
                 curatorFullName,
                 event.getMaximumCapacity(),
                 event.getEventType(),
-                attendees);
+                attendees,
+                isRegistered);
     }
 }

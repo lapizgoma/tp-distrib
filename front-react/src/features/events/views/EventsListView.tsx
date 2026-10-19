@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import type { EventFilters, EventType, SavedFilterRequestDTO } from '../types/events.types';
 import { useEvents } from '../hooks/useEvents';
 import { createSavedFilter } from '../api/savedFiltersApi';
+import { useCanAccess } from '@/shared/hooks/useCanAccess';
 import { EventCard } from '../components/EventCard';
 import { EventCardSkeleton } from '../components/EventCardSkeleton';
 import { EventFiltersBar } from '../components/EventFiltersBar';
@@ -32,6 +33,7 @@ export function EventsListView() {
   const [searchParams, setSearchParams] = useSearchParams();
   const filters = useMemo(() => filtersFromParams(searchParams), [searchParams]);
   const { events, loading, error } = useEvents(filters);
+  const canSaveFilter = useCanAccess(['VISITANTE', 'ADMINISTRADOR', 'CURADOR']);
 
   const [saveOpen, setSaveOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -47,7 +49,6 @@ export function EventsListView() {
   };
 
   const handleSaveFilter = async (payload: SavedFilterRequestDTO) => {
-    // TODO(auth): guardar un filtro requiere sesión iniciada (rol VISITANTE).
     setSaving(true);
     setSaveError(null);
     try {
@@ -87,15 +88,17 @@ export function EventsListView() {
         onChange={handleFiltersChange}
         onReset={() => handleFiltersChange({})}
         rightSlot={
-          <Button
-            type="button"
-            variant="secondary"
-            className="flex-1"
-            onClick={() => setSaveOpen(true)}
-          >
-            <BookmarkPlus className="size-4" />
-            Guardar filtro
-          </Button>
+          canSaveFilter ? (
+            <Button
+              type="button"
+              variant="secondary"
+              className="flex-1"
+              onClick={() => setSaveOpen(true)}
+            >
+              <BookmarkPlus className="size-4" />
+              Guardar filtro
+            </Button>
+          ) : undefined
         }
       />
 

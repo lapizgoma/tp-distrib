@@ -12,10 +12,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 /**
  * ABM de eventos.
- *
- * TODO(auth): toda esta vista debe quedar protegida para los roles CURADOR y
- * ADMINISTRADOR (el backend ya lo restringe con @PreAuthorize). Sin sesión,
- * habría que redirigir al login.
  */
 export function EventFormView() {
   const { id } = useParams<{ id: string }>();

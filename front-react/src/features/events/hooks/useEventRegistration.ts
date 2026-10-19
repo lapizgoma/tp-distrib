@@ -10,9 +10,6 @@ interface UseEventRegistrationReturn {
 
 /**
  * Inscripción / cancelación a un evento (POST y DELETE en /api/rest/events/members).
- *
- * TODO(auth): ambos endpoints requieren un usuario autenticado (rol VISITANTE).
- * Los botones que consumen este hook deben ocultarse/bloquearse si no hay sesión.
  */
 export function useEventRegistration(): UseEventRegistrationReturn {
   const [submitting, setSubmitting] = useState(false);

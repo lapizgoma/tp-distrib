@@ -55,19 +55,24 @@ public class EventService {
         Event event = eventRepository.findByIdWithCurator(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Evento no encontrado con ID: " + id));
 
-        if (!canViewAttendees(event)) {
-            return EventResponseDTO.fromEntity(event);
+        User viewer = getAuthenticatedUserOrNull();
+
+        List<EventAttendeeDTO> attendees = null;
+        if (canViewAttendees(event, viewer)) {
+            attendees = registrationRepository.findByEventIdWithUser(id)
+                    .stream()
+                    .map(EventAttendeeDTO::fromEntity)
+                    .toList();
         }
 
-        List<EventAttendeeDTO> attendees = registrationRepository.findByEventIdWithUser(id)
-                .stream()
-                .map(EventAttendeeDTO::fromEntity)
-                .toList();
-        return EventResponseDTO.fromEntity(event, attendees);
+        Boolean isRegistered = viewer != null
+                ? registrationRepository.existsByEventIdAndUserId(id, viewer.getId())
+                : null;
+
+        return EventResponseDTO.fromEntity(event, attendees, isRegistered);
     }
 
-    private boolean canViewAttendees(Event event) {
-        User viewer = getAuthenticatedUserOrNull();
+    private boolean canViewAttendees(Event event, User viewer) {
         if (viewer == null) {
             return false;
         }

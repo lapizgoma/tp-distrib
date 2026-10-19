@@ -42,6 +42,8 @@ export interface EventResponseDTO {
   eventType: EventType;
   /** Solo se completa para el curador a cargo o un administrador. */
   attendees?: EventAttendeeDTO[] | null;
+  /** true si el usuario autenticado está inscripto; null para anónimos. */
+  isRegistered?: boolean | null;
 }
 
 /** Cuerpo de POST/PUT /api/rest/events (EventRequestDTO). */

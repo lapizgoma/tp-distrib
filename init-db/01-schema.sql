@@ -6,6 +6,8 @@
 -- Indices, claves unicas y FK declarados inline en cada tabla.
 -- ============================================================
 
+SET NAMES utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+
 CREATE TABLE IF NOT EXISTS users (
     id          BIGINT       NOT NULL AUTO_INCREMENT,
     email       VARCHAR(255) NOT NULL,
