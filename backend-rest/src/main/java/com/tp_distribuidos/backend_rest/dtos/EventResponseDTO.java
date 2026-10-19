@@ -37,12 +37,12 @@ public record EventResponseDTO(
         @Schema(example = "VISITA_GUIADA")
         EventType eventType,
 
-        @Schema(description = "Lista de inscriptos; solo se completa para el curador a cargo o un administrador")
+        @Schema(description = "Lista de inscriptos; null si el viewer no tiene permiso, [] si tiene permiso y no hay inscriptos")
         List<EventAttendeeDTO> attendees
 ) {
 
     public static EventResponseDTO fromEntity(Event event) {
-        return fromEntity(event, List.of());
+        return fromEntity(event, null);
     }
 
     public static EventResponseDTO fromEntity(Event event, List<EventAttendeeDTO> attendees) {
