@@ -62,6 +62,7 @@ class EventResponseDTOTest {
         EventResponseDTO dto = EventResponseDTO.fromEntity(event);
 
         assertThat(dto.attendees()).isNull();
+        assertThat(dto.isRegistered()).isNull();
     }
 
     @Test
@@ -73,6 +74,24 @@ class EventResponseDTOTest {
         EventResponseDTO dto = EventResponseDTO.fromEntity(event, attendees);
 
         assertThat(dto.attendees()).isSameAs(attendees);
+    }
+
+    @Test
+    void defaultsIsRegisteredToNullWhenNotProvided() {
+        Event event = buildEvent(buildCurator("Ana", "Gomez"));
+
+        EventResponseDTO dto = EventResponseDTO.fromEntity(event, List.of());
+
+        assertThat(dto.isRegistered()).isNull();
+    }
+
+    @Test
+    void passesThroughProvidedIsRegistered() {
+        Event event = buildEvent(buildCurator("Ana", "Gomez"));
+
+        EventResponseDTO dto = EventResponseDTO.fromEntity(event, List.of(), true);
+
+        assertThat(dto.isRegistered()).isTrue();
     }
 
     private Event buildEvent(User leadCurator) {

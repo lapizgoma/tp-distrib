@@ -122,6 +122,7 @@ class EventServiceTest {
         EventResponseDTO result = eventService.getEventById(EVENT_ID);
 
         assertThat(result.attendees()).isNull();
+        assertThat(result.isRegistered()).isNull();
         verify(registrationRepository, never()).findByEventIdWithUser(any());
     }
 
@@ -135,6 +136,7 @@ class EventServiceTest {
         EventResponseDTO result = eventService.getEventById(EVENT_ID);
 
         assertThat(result.attendees()).isNull();
+        assertThat(result.isRegistered()).isNull();
         verify(registrationRepository, never()).findByEventIdWithUser(any());
     }
 
@@ -144,11 +146,26 @@ class EventServiceTest {
         Event event = buildEvent(EVENT_ID, buildUser(CURATOR_ID, UserRole.CURADOR, "Ana", "Gomez"));
         when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(buildUser(USER_ID, UserRole.VISITANTE, "Pepe", "Lopez")));
         when(eventRepository.findByIdWithCurator(EVENT_ID)).thenReturn(Optional.of(event));
+        when(registrationRepository.existsByEventIdAndUserId(EVENT_ID, USER_ID)).thenReturn(true);
 
         EventResponseDTO result = eventService.getEventById(EVENT_ID);
 
         assertThat(result.attendees()).isNull();
+        assertThat(result.isRegistered()).isTrue();
         verify(registrationRepository, never()).findByEventIdWithUser(any());
+    }
+
+    @Test
+    void getEventByIdReturnsIsRegisteredFalseWhenVisitorIsNotRegistered() {
+        authenticate();
+        Event event = buildEvent(EVENT_ID, buildUser(CURATOR_ID, UserRole.CURADOR, "Ana", "Gomez"));
+        when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(buildUser(USER_ID, UserRole.VISITANTE, "Pepe", "Lopez")));
+        when(eventRepository.findByIdWithCurator(EVENT_ID)).thenReturn(Optional.of(event));
+        when(registrationRepository.existsByEventIdAndUserId(EVENT_ID, USER_ID)).thenReturn(false);
+
+        EventResponseDTO result = eventService.getEventById(EVENT_ID);
+
+        assertThat(result.isRegistered()).isFalse();
     }
 
     @Test
@@ -161,6 +178,7 @@ class EventServiceTest {
         EventResponseDTO result = eventService.getEventById(EVENT_ID);
 
         assertThat(result.attendees()).isNull();
+        assertThat(result.isRegistered()).isNull();
     }
 
     @Test
@@ -173,6 +191,7 @@ class EventServiceTest {
         EventResponseDTO result = eventService.getEventById(EVENT_ID);
 
         assertThat(result.attendees()).isNull();
+        assertThat(result.isRegistered()).isFalse();
     }
 
     @Test
