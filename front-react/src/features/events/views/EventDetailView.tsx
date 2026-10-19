@@ -34,13 +34,20 @@ export function EventDetailView() {
   const { remove, submitting: deleting } = useEventMutations();
 
   const [confirmOpen, setConfirmOpen] = useState(false);
-  // TODO(auth): usar el rol del visitante autenticado para alternar este estado
-  // (se resolvería con GET /api/rest/events/members o un "me" del backend).
-  const [isRegistered, setIsRegistered] = useState(false);
+  const [registrationOverride, setRegistrationOverride] = useState<{
+    eventId: string | undefined;
+    value: boolean;
+  } | null>(null);
 
   const isAuthenticated = useCanAccess();
   const canRegister = useCanAccess(['VISITANTE']);
   const canManage = useCanAccess(['CURADOR', 'ADMINISTRADOR']);
+
+  // Estado desde el backend, con override local tras inscribirse/cancelar.
+  const isRegistered =
+    registrationOverride && registrationOverride.eventId === id
+      ? registrationOverride.value
+      : event?.isRegistered ?? false;
 
   const handleRegister = async () => {
     if (!event) return;
@@ -50,7 +57,7 @@ export function EventDetailView() {
     }
     const ok = await registration.register(event.id);
     if (ok) {
-      setIsRegistered(true);
+      setRegistrationOverride({ eventId: id, value: true });
       toast.success('¡Inscripción confirmada!');
     }
   };
@@ -63,7 +70,7 @@ export function EventDetailView() {
     }
     const ok = await registration.cancel(event.id);
     if (ok) {
-      setIsRegistered(false);
+      setRegistrationOverride({ eventId: id, value: false });
       toast.success('Inscripción cancelada');
     }
   };
