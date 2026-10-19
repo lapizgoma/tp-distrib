@@ -92,5 +92,75 @@ services:
       - backend-rest
       - backend-graphql
 
+  # Servidor gRPC Works (Python)
+  grpc-works:
+    profiles: ["app", "full"]
+    build:
+      context: ./grpc-works
+      dockerfile: Dockerfile
+    container_name: museo-grpc-works
+    restart: unless-stopped
+    environment:
+      GRPC_PORT: "50051"
+      GRPC_MAX_WORKERS: "${GRPC_MAX_WORKERS:-10}"
+      DB_HOST: ${DB_HOST:-mysql}
+      DB_PORT: "3306"
+      DB_NAME: ${DB_NAME:-museo_virtual}
+      DB_USER: ${DB_USER:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-root}
+      DB_POOL_SIZE: "${DB_POOL_SIZE:-5}"
+      ROOM_TRANSITION_MINUTES: "${ROOM_TRANSITION_MINUTES:-5}"
+    ports:
+      - "${GRPC_WORKS_PORT:-50051}:50051"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  # Servidor gRPC Events (Python)
+  grpc-events:
+    profiles: ["app", "full"]
+    build:
+      context: ./grpc-events
+      dockerfile: Dockerfile
+    container_name: museo-grpc-events
+    restart: unless-stopped
+    environment:
+      GRPC_PORT: "50052"
+      GRPC_MAX_WORKERS: "${GRPC_MAX_WORKERS:-10}"
+      DB_HOST: ${DB_HOST:-mysql}
+      DB_PORT: "3306"
+      DB_NAME: ${DB_NAME:-museo_virtual}
+      DB_USER: ${DB_USER:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-root}
+      DB_POOL_SIZE: "${DB_POOL_SIZE:-5}"
+    ports:
+      - "${GRPC_EVENTS_PORT:-50052}:50052"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  # Servidor gRPC Users (Python)
+  grpc-users:
+    profiles: ["app", "full"]
+    build:
+      context: ./grpc-users
+      dockerfile: Dockerfile
+    container_name: museo-grpc-users
+    restart: unless-stopped
+    environment:
+      GRPC_PORT: "50053"
+      GRPC_MAX_WORKERS: "${GRPC_MAX_WORKERS:-10}"
+      DB_HOST: ${DB_HOST:-mysql}
+      DB_PORT: "3306"
+      DB_NAME: ${DB_NAME:-museo_virtual}
+      DB_USER: ${DB_USER:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-root}
+      DB_POOL_SIZE: "${DB_POOL_SIZE:-5}"
+    ports:
+      - "${GRPC_USERS_PORT:-50053}:50053"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
 volumes:
   mysql-data:
