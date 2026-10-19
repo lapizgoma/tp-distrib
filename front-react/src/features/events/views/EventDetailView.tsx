@@ -5,6 +5,7 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock,
+  LogIn,
   Pencil,
   Trash2,
   UserCheck,
@@ -15,6 +16,7 @@ import { toast } from 'sonner';
 import { useEvent } from '../hooks/useEvent';
 import { useEventRegistration } from '../hooks/useEventRegistration';
 import { useEventMutations } from '../hooks/useEventMutations';
+import { useCanAccess } from '@/shared/hooks/useCanAccess';
 import { EventTypeBadge } from '../components/EventTypeBadge';
 import { AttendeesTable } from '../components/AttendeesTable';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
@@ -36,9 +38,16 @@ export function EventDetailView() {
   // (se resolvería con GET /api/rest/events/members o un "me" del backend).
   const [isRegistered, setIsRegistered] = useState(false);
 
+  const isAuthenticated = useCanAccess();
+  const canRegister = useCanAccess(['VISITANTE']);
+  const canManage = useCanAccess(['CURADOR', 'ADMINISTRADOR']);
+
   const handleRegister = async () => {
     if (!event) return;
-    // TODO(auth): si no hay sesión, redirigir al login en lugar de inscribir.
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
     const ok = await registration.register(event.id);
     if (ok) {
       setIsRegistered(true);
@@ -48,7 +57,10 @@ export function EventDetailView() {
 
   const handleCancel = async () => {
     if (!event) return;
-    // TODO(auth): idem, requiere sesión iniciada.
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
     const ok = await registration.cancel(event.id);
     if (ok) {
       setIsRegistered(false);
@@ -154,51 +166,63 @@ export function EventDetailView() {
         </Card>
       </div>
 
-      {/* Inscripción — Visitante */}
-      {/* TODO(auth): mostrar esta sección solo para usuarios con rol VISITANTE autenticados. */}
-      <Card className="ring-border shadow-none">
-        <CardHeader>
-          <CardTitle>Tu inscripción</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          {isRegistered ? (
-            <>
-              <p className="flex items-center gap-2 text-sm text-foreground">
-                <CheckCircle2 className="size-4 text-accent" />
-                Ya estás inscripto a este evento.
-              </p>
-              <Button
-                variant="outline"
-                className="w-fit"
-                disabled={registration.submitting}
-                onClick={handleCancel}
-              >
-                {registration.submitting ? 'Cancelando…' : 'Cancelar participación'}
-              </Button>
-            </>
-          ) : (
-            <>
-              <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                <UserCheck className="size-4" />
-                Reservá tu lugar antes de que se agoten.
-              </p>
-              <Button
-                className="w-fit"
-                disabled={registration.submitting}
-                onClick={handleRegister}
-              >
-                {registration.submitting ? 'Inscribiendo…' : 'Inscribirme'}
-              </Button>
-            </>
-          )}
-          {registration.error && (
-            <p className="text-sm text-destructive">{registration.error}</p>
-          )}
-        </CardContent>
-      </Card>
+      {/* Inscripción: VISITANTE autenticado inscribe; el resto (anónimos) inicia sesión. */}
+      {(!isAuthenticated || canRegister) && (
+        <Card className="ring-border shadow-none">
+          <CardHeader>
+            <CardTitle>Tu inscripción</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            {!isAuthenticated ? (
+              <>
+                <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <UserCheck className="size-4" />
+                  Iniciá sesión para inscribirte a este evento.
+                </p>
+                <Button className="w-fit" onClick={() => navigate('/login')}>
+                  <LogIn className="size-4" />
+                  Iniciá sesión para inscribirte
+                </Button>
+              </>
+            ) : isRegistered ? (
+              <>
+                <p className="flex items-center gap-2 text-sm text-foreground">
+                  <CheckCircle2 className="size-4 text-accent" />
+                  Ya estás inscripto a este evento.
+                </p>
+                <Button
+                  variant="outline"
+                  className="w-fit"
+                  disabled={registration.submitting}
+                  onClick={handleCancel}
+                >
+                  {registration.submitting ? 'Cancelando…' : 'Cancelar participación'}
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <UserCheck className="size-4" />
+                  Reservá tu lugar antes de que se agoten.
+                </p>
+                <Button
+                  className="w-fit"
+                  disabled={registration.submitting}
+                  onClick={handleRegister}
+                >
+                  {registration.submitting ? 'Inscribiendo…' : 'Inscribirme'}
+                </Button>
+              </>
+            )}
+            {registration.error && (
+              <p className="text-sm text-destructive">{registration.error}</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Inscriptos — Curador/Admin */}
-      {attendees && (
+      {attendees !== null && (
         <Card className="ring-border shadow-none">
           <CardHeader>
             <CardTitle>Lista de inscriptos ({attendees.length})</CardTitle>
@@ -210,20 +234,21 @@ export function EventDetailView() {
       )}
 
       {/* Acciones de gestión — CURADOR/ADMIN */}
-      {/* TODO(auth): habilitar solo para roles CURADOR o ADMINISTRADOR. */}
-      <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4">
-        <span className="mr-auto text-caption font-medium text-muted-foreground">
-          Gestión del evento
-        </span>
-        <Button variant="outline" size="sm" render={<Link to={`/eventos/${event.id}/editar`} />}>
-          <Pencil className="size-4" />
-          Editar
-        </Button>
-        <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setConfirmOpen(true)}>
-          <Trash2 className="size-4" />
-          Eliminar
-        </Button>
-      </div>
+      {canManage && (
+        <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4">
+          <span className="mr-auto text-caption font-medium text-muted-foreground">
+            Gestión del evento
+          </span>
+          <Button variant="outline" size="sm" render={<Link to={`/eventos/${event.id}/editar`} />}>
+            <Pencil className="size-4" />
+            Editar
+          </Button>
+          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setConfirmOpen(true)}>
+            <Trash2 className="size-4" />
+            Eliminar
+          </Button>
+        </div>
+      )}
 
       <ConfirmDeleteDialog
         open={confirmOpen}
