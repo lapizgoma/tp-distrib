@@ -9,6 +9,7 @@ import { LoginView } from "@/features/auth/views/LoginView";
 import { RegisterView } from "@/features/auth/views/RegisterView";
 import { WorksListView } from "@/features/works/views/WorksListView";
 import { WorkDetailView } from "@/features/works/views/WorkDetailView";
+import { ReportView } from "./features/reports/views/ReportView";
 
 export function AppRouter() {
     return (
@@ -40,6 +41,7 @@ export function AppRouter() {
                     <Route element={<RequireRole roles={['CURADOR', 'ADMINISTRADOR']} />}>
                         <Route path="eventos/nuevo" element={<EventFormView />} />
                         <Route path="eventos/:id/editar" element={<EventFormView />} />
+                        <Route path="eventos/reporte" element={<ReportView />} />
                     </Route>
                 </Route>
                 <Route path="*" element={<Navigate to="/" />} />

@@ -19,6 +19,12 @@ export function Layout() {
 
   const isLogged = isTokenValid(token);
 
+  const user = useAuthStore((state) => state.user);
+  const canSeeReport = user?.role === 'CURADOR' || user?.role === 'ADMINISTRADOR';
+  const finalNavItems = canSeeReport
+    ? [{ to: '/eventos/reporte', label: 'Reporte', end: false }, ...navItems]
+    : navItems;
+
   const handleLogout = () => {
     logout();
     toast.success('Sesión cerrada');
@@ -38,7 +44,7 @@ export function Layout() {
             </span>
           </Link>
 
-          {navItems.map((item) => (
+          {finalNavItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
