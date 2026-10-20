@@ -1,4 +1,3 @@
-// src/features/works/hooks/useWorks.ts
 import { useState, useEffect, useCallback } from 'react';
 import type { Work, WorkFilters } from '../types/works.types';
 import { getWorks } from '../api/worksGqlApi';
