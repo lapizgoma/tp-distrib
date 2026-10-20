@@ -1,4 +1,3 @@
-// src/features/works/views/WorksListView.tsx
 import { useWorks } from '../hooks/useWorks';
 import { WorkCard } from '../components/WorkCard';
 import { WorkFiltersBar } from '../components/WorkFiltersBar';

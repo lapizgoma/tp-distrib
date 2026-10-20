@@ -1,4 +1,3 @@
-// src/features/works/api/commentsRestApi.ts
 import { apiRequest } from '@/shared/api/rest';
 import type { Comment, CommentRequestDTO } from '../types/works.types';
 

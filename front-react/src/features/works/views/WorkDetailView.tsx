@@ -1,4 +1,3 @@
-// src/features/works/views/WorkDetailView.tsx
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useWork } from '../hooks/useWork';
@@ -26,7 +25,7 @@ export function WorkDetailView() {
     try {
       await addComment(id, { text: commentText.trim() });
       setCommentText('');
-      await refetch(); // Recargamos para ver el nuevo comentario
+      await refetch(); 
     } catch (err: unknown) {
       if (err instanceof Error) {
         setSubmitError(err.message || 'Error al enviar el comentario');
@@ -49,7 +48,7 @@ export function WorkDetailView() {
     return (
       <div className="container mx-auto px-4 py-12 max-w-2xl text-center space-y-4">
         <p className="text-destructive font-semibold text-lg">{error || 'Obra no encontrada'}</p>
-        <Button variant="outline" render={<Link to="/catalogo" />}>
+        <Button variant="outline" render={<Link to="/obras" />}>
           <ArrowLeft className="size-4 mr-2" />
           Volver al catálogo
         </Button>
@@ -62,14 +61,12 @@ export function WorkDetailView() {
   return (
     <div className="container mx-auto px-4 py-8 space-y-8 max-w-5xl">
       {/* Botón Volver */}
-      <Button variant="ghost" size="sm" render={<Link to="/catalogo" />} className="gap-2">
+      <Button variant="ghost" size="sm" render={<Link to="/obras" />} className="gap-2">
         <ArrowLeft className="size-4" />
         Volver al catálogo
       </Button>
 
-      {/* Tarjeta Principal de la Obra */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-        {/* Imagen / Placeholder */}
         <div className="rounded-xl overflow-hidden bg-muted border border-border h-80 md:h-[420px] flex items-center justify-center relative shadow-sm">
           {work.image_url ? (
             <img src={work.image_url} alt={work.title} className="w-full h-full object-cover" />

@@ -28,7 +28,7 @@ export function AppRouter() {
 
 
                     {/* Feature: Obras y Comentarios */}
-                    <Route path="catalogo" element={<WorksListView />} />
+                    <Route path="catalogo" element={<Navigate to="/obras" replace />} />
                     <Route path="obras" element={<WorksListView />} />
                     <Route path="obras/:id" element={<WorkDetailView />} />
 
