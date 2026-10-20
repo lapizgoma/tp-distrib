@@ -1,5 +1,3 @@
-// src/features/works/types/works.types.ts
-
 export type Availability = 'EN_EXHIBICION' | 'EN_DEPOSITO';
 
 export type Era = 

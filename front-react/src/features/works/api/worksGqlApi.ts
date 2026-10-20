@@ -1,4 +1,3 @@
-// src/features/works/api/worksGqlApi.ts
 import type { Work, WorkFilters } from '../types/works.types';
 
 const GRAPHQL_URL = '/api/graphql';
@@ -42,7 +41,6 @@ export async function getWorks(filters: WorkFilters = {}, signal?: AbortSignal):
     }
   `;
 
-  // Limpiamos variables vacías para que GraphQL no envíe strings vacíos
   const variables = Object.fromEntries(
     Object.entries(filters).filter((entry) => entry[1] !== undefined && entry[1] !== '')
   );

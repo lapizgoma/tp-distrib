@@ -9,7 +9,7 @@ const navItems = [
   { to: '/', label: 'Inicio', end: true },
   { to: '/eventos', label: 'Eventos', end: true },
   { to: '/eventos/mis-filtros', label: 'Mis filtros', end: true },
-  { to: '/catalogo', label: 'Catálogo', end: false },
+  { to: '/obras', label: 'Catálogo', end: false },
 ];
 
 export function Layout() {

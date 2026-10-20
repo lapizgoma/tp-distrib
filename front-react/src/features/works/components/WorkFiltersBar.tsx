@@ -1,4 +1,3 @@
-// src/features/works/components/WorkFiltersBar.tsx
 import { Search, RotateCcw } from 'lucide-react';
 import type { WorkFilters, Availability } from '../types/works.types';
 import { ERA_LABELS, TECHNIQUE_LABELS, LOCATION_LABELS } from '../types/works.types';

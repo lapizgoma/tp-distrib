@@ -1,4 +1,3 @@
-// src/features/works/components/WorkCard.tsx
 import { Link } from 'react-router-dom';
 import { Palette, MapPin, MessageSquare, Calendar } from 'lucide-react';
 import type { Work } from '../types/works.types';
@@ -16,7 +15,6 @@ export function WorkCard({ work }: WorkCardProps) {
 
   return (
     <Card className="group relative flex h-full flex-col overflow-hidden ring-1 ring-border transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:ring-primary/30">
-      {/* Banner de Imagen */}
       <div className="relative h-52 w-full overflow-hidden bg-muted">
         {work.image_url ? (
           <img

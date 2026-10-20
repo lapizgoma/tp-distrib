@@ -1,4 +1,3 @@
-// src/features/works/hooks/useWork.ts
 import { useState, useEffect, useCallback } from 'react';
 import type { Work } from '../types/works.types';
 import { getWorks } from '../api/worksGqlApi';
@@ -13,7 +12,6 @@ export function useWork(workId: string | undefined) {
     setLoading(true);
     setError(null);
     try {
-      // Pedimos las obras y filtramos la que coincide con el ID
       const allWorks = await getWorks();
       const found = allWorks.find((w) => String(w.id) === String(workId));
       if (found) {
