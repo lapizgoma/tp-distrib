@@ -20,12 +20,15 @@ func main() {
 	// definición de endpoints (configurables por variables de entorno)
 	restTarget, _ := url.Parse(getenv("REST_TARGET", "http://localhost:8081"))
 	gqlTarget, _ := url.Parse(getenv("GQL_TARGET", "http://localhost:8082"))
+	gatewayTarget, _ := url.Parse(getenv("GATEWAY_TARGET", "http://localhost:8090"))
+
 	port := getenv("PORT", "8080")
 
 	// proxies para cada endpoint:
 	// 		se encarga de manejar los encabezados HTTP que son "sensibles" a quién los manda.
 	restProxy := httputil.NewSingleHostReverseProxy(restTarget)
 	gqlProxy := httputil.NewSingleHostReverseProxy(gqlTarget)
+	gatewayProxy := httputil.NewSingleHostReverseProxy(gatewayTarget)
 
 	// dispatcher
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -35,6 +38,9 @@ func main() {
 		} else if strings.HasPrefix(r.URL.Path, "/api/rest") {
 			log.Println("INFO: Routing to REST service")
 			restProxy.ServeHTTP(w, r)
+		} else if strings.HasPrefix(r.URL.Path, "/api/grpc") {
+			log.Println("INFO: Routing to API Gateway ")
+			gatewayProxy.ServeHTTP(w, r)
 		} else {
 			http.Error(w, "Not Found", http.StatusNotFound)
 		}
