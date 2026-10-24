@@ -182,6 +182,7 @@ services:
       - "8090:8090"
     depends_on:
       - grpc-works
+      - grpc-events
 
 volumes:
   mysql-data:
