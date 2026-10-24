@@ -9,6 +9,7 @@ const call = jest.fn();
 const app = createApp({ clients: { works: worksClient }, call });
 
 const URL = "/api/grpc/works/compare";
+
 const token = (role = "VISITANTE") =>
   jwt.sign({ sub: "7", role }, "test-secret", { algorithm: "HS256" });
 const bearer = (role) => ({ Authorization: `Bearer ${token(role)}` });
