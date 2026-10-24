@@ -18,6 +18,8 @@ message Event {
 message EventsByLocationsRequest {
   repeated string locations = 1;
   bool only_future = 2;
+  string start_datetime = 3;
+  string end_datetime = 4;
 }
 
 // Req 1: Personalized Tour
