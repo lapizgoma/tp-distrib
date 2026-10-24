@@ -17,6 +17,7 @@ message Event {
 // Req 1: Personalized Tour
 message EventsByLocationsRequest {
   repeated string locations = 1;
+  bool only_future = 2;
 }
 
 // Req 1: Personalized Tour

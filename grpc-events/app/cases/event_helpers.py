@@ -38,6 +38,35 @@ def format_datetime(value) -> str:
     return text
 
 
+def parse_datetime(value) -> datetime | None:
+    """Convierte un valor de fecha en datetime; devuelve None si no se puede."""
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text.replace(" ", "T", 1))
+    except ValueError:
+        return None
+
+
+def filter_rows_by_future(
+    rows: list[dict],
+    now: datetime | None = None,
+) -> list[dict]:
+    """Filtra eventos cuya fecha es igual o posterior a ``now``."""
+    reference = now or datetime.now()
+    filtered = []
+    for row in rows:
+        event_datetime = parse_datetime(row.get("datetime"))
+        if event_datetime is not None and event_datetime >= reference:
+            filtered.append(row)
+    return filtered
+
+
 def row_to_event(row: dict) -> event_pb2.Event:
     """Convierte una fila de MySQL en un mensaje protobuf Event."""
     return event_pb2.Event(
