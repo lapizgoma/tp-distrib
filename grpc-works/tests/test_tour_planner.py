@@ -6,8 +6,11 @@ from app.cases.tour_planner import (
     canonical_era,
     canonical_location,
     canonical_technique,
+    has_tour_location,
     parse_topics,
     plan_tour,
+    plan_tour_with_fallback,
+    tour_rooms,
 )
 
 
@@ -166,6 +169,68 @@ class TourPlannerTest(unittest.TestCase):
 
         self.assertEqual([work.id for work in result], [1])
         self.assertEqual(calculate_total_duration(result, 5), 10)
+
+    def test_excludes_works_without_tour_location(self):
+        works = [
+            make_work(1, location=""),
+            make_work(2, location="DEPOSITO"),
+            make_work(3, location="SALA_2_IMPRESIONISMO"),
+        ]
+
+        result = plan_tour(works)
+
+        self.assertEqual([work.id for work in result], [3])
+        self.assertFalse(has_tour_location(works[0]))
+        self.assertFalse(has_tour_location(works[1]))
+        self.assertTrue(has_tour_location(works[2]))
+
+    def test_tour_rooms_preserves_visit_order(self):
+        works = [
+            make_work(1, location="SALA_4_ARTE_MODERNO"),
+            make_work(2, location="SALA_2_IMPRESIONISMO"),
+            make_work(3, location="SALA_4_ARTE_MODERNO"),
+        ]
+
+        ordered = plan_tour(works)
+
+        self.assertEqual(
+            tour_rooms(ordered),
+            ["sala_2_impresionismo", "sala_4_arte_moderno"],
+        )
+
+    def test_fallback_relaxes_technique(self):
+        works = [make_work(1, topic="Nature", era="IMPRESIONISMO", technique="OLEO")]
+
+        selected, notes = plan_tour_with_fallback(
+            works,
+            topics=["Nature"],
+            eras=["Impresionismo"],
+            techniques=["Temple"],
+        )
+
+        self.assertEqual([work.id for work in selected], [1])
+        self.assertEqual(len(notes), 1)
+        self.assertIn("técnicas", notes[0])
+
+    def test_fallback_relaxes_era(self):
+        works = [make_work(1, topic="Nature", era="IMPRESIONISMO", technique="OLEO")]
+
+        selected, notes = plan_tour_with_fallback(
+            works,
+            topics=["Nature"],
+            eras=["Renacimiento"],
+        )
+
+        self.assertEqual([work.id for work in selected], [1])
+        self.assertIn("era", notes[0])
+
+    def test_fallback_does_not_relax_topics(self):
+        works = [make_work(1, topic="Nature")]
+
+        selected, notes = plan_tour_with_fallback(works, topics=["Mythology"])
+
+        self.assertEqual(selected, [])
+        self.assertIn("temas", notes[0])
 
 
 if __name__ == "__main__":

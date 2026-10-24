@@ -18,6 +18,7 @@ message Work {
   string location = 12;
   string availability = 13;
   int32 estimated_duration_minutes = 14;
+  repeated string topics = 15;
 }
 
 // Req 1: Personalized Tour
@@ -31,6 +32,13 @@ message TourCriteriaRequest {
 
 message WorkListResponse {
   repeated Work works = 1;
+}
+
+message TourPlanResponse {
+  repeated Work works = 1;
+  int32 total_duration_minutes = 2;
+  repeated string rooms = 3;
+  repeated string notes = 4;
 }
 
 // Req 2: Work Comparison
@@ -60,7 +68,7 @@ message ExplorationWorksResponse {
 // Service Definition
 service WorkService {
   // 1. Tour Generation
-  rpc SearchWorksForTour (TourCriteriaRequest) returns (WorkListResponse);
+  rpc SearchWorksForTour (TourCriteriaRequest) returns (TourPlanResponse);
   
   // 2. Comparison
   rpc GetWorksForComparison (CompareWorksRequest) returns (WorkListResponse);
