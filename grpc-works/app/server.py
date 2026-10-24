@@ -8,6 +8,7 @@ import grpc
 import mysql.connector
 
 from app.cases.search_works_for_tour import search_works_for_tour
+from app.cases.get_works_and_artists_by_era import get_works_and_artists_by_era
 from app.config import load_env
 from app.generated import work_pb2_grpc
 
@@ -26,6 +27,16 @@ class WorkServiceServicer(work_pb2_grpc.WorkServiceServicer):
             logging.exception("SearchWorksForTour unexpected error")
             context.abort(grpc.StatusCode.INTERNAL, "internal error")
 
+    def GetWorksAndArtistsByEra(self, request, context):
+        """Devuelve las obras y artistas según la era/movimiento artístico solicitado."""
+        try:
+            return get_works_and_artists_by_era(request)
+        except mysql.connector.Error:
+            logging.exception("GetWorksAndArtistsByEra database error")
+            context.abort(grpc.StatusCode.INTERNAL, "database error")
+        except Exception:
+            logging.exception("GetWorksAndArtistsByEra unexpected error")
+            context.abort(grpc.StatusCode.INTERNAL, "internal error")
 
 def _env_int(name: str, default: int) -> int:
     """Devuelve una variable de entorno como entero o el valor por defecto."""
