@@ -166,8 +166,10 @@ services:
   api-gateway:
     profiles: ["grpc", "full"]
     build:
-      context: .
-      dockerfile: api-gateway/Dockerfile
+      context: ./api-gateway
+      dockerfile: Dockerfile
+      additional_contexts:
+        protos: ./protos
     container_name: museo-api-gateway
     restart: unless-stopped
     environment:
