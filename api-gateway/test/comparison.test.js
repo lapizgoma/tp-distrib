@@ -11,7 +11,7 @@ const app = createApp({ clients: { works: worksClient }, call });
 const URL = "/api/grpc/works/compare";
 
 const token = (role = "VISITANTE") =>
-  jwt.sign({ sub: "7", role }, "test-secret", { algorithm: "HS256" });
+  jwt.sign({ sub: 'u7@museo.com', userId: 7, role }, "test-secret", { algorithm: "HS256" });
 const bearer = (role) => ({ Authorization: `Bearer ${token(role)}` });
 const grpcError = (code, details) =>
   Object.assign(new Error(details), { code, details });
