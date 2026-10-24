@@ -13,7 +13,7 @@ const URL = "/api/grpc/tours/plan";
 const user = { id: "7", rol: "VISITANTE" };
 
 const token = (role = "VISITANTE") =>
-  jwt.sign({ sub: "7", role }, "test-secret", { algorithm: "HS256" });
+  jwt.sign({ sub: "u7@museo.com", userId: 7, role }, "test-secret", { algorithm: "HS256" });
 const bearer = (role) => ({ Authorization: `Bearer ${token(role)}` });
 const grpcError = (code, details) =>
   Object.assign(new Error(details), { code, details });
@@ -28,19 +28,106 @@ const criteria = {
 
 const plan = {
   works: [
-    { id: "1", title: "Obra A" },
-    { id: "2", title: "Obra B" },
+    {
+      id: "1",
+      title: "Obra A",
+      location: "SALA_2_IMPRESIONISMO",
+      estimated_duration_minutes: 20,
+    },
+    {
+      id: "2",
+      title: "Obra B",
+      location: "SALA_4_ARTE_MODERNO",
+      estimated_duration_minutes: 5,
+    },
   ],
   total_duration_minutes: 30,
   rooms: ["sala_2_impresionismo", "sala_4_arte_moderno"],
   notes: [],
 };
 
+const startedCriteria = {
+  ...criteria,
+  start_datetime: "2026-11-01T10:00",
+};
+
 const eventsPayload = {
   events: [
-    { id: "10", title: "Visita guiada", location: "SALA_2_IMPRESIONISMO" },
+    {
+      id: "10",
+      title: "Visita guiada",
+      datetime: "2026-11-01T10:05:00",
+      duration: 10,
+      location: "SALA_2_IMPRESIONISMO",
+    },
   ],
 };
+
+const scheduledPlan = {
+  works: [
+    {
+      id: "1",
+      title: "Obra A",
+      location: "SALA_2_IMPRESIONISMO",
+      estimated_duration_minutes: 20,
+    },
+    {
+      id: "2",
+      title: "Obra B",
+      location: "SALA_2_IMPRESIONISMO",
+      estimated_duration_minutes: 10,
+    },
+    {
+      id: "3",
+      title: "Obra C",
+      location: "SALA_4_ARTE_MODERNO",
+      estimated_duration_minutes: 15,
+    },
+  ],
+  total_duration_minutes: 50,
+  rooms: ["sala_2_impresionismo", "sala_4_arte_moderno"],
+  notes: [],
+};
+
+const scheduledCriteria = startedCriteria;
+
+const scheduledEvents = [
+  {
+    id: "20",
+    title: "Durante la primera sala",
+    datetime: "2026-11-01T10:10:00",
+    duration: 15,
+    location: "SALA_2_IMPRESIONISMO",
+  },
+  {
+    id: "21",
+    title: "Después de salir de la sala",
+    datetime: "2026-11-01T10:35:00",
+    duration: 10,
+    location: "SALA_2_IMPRESIONISMO",
+  },
+  {
+    id: "22",
+    title: "Durante la segunda sala",
+    datetime: "2026-11-01T10:40:00",
+    duration: 5,
+    location: "SALA_4_ARTE_MODERNO",
+  },
+  {
+    id: "23",
+    title: "En curso al llegar",
+    datetime: "2026-11-01T10:20:00",
+    duration: 30,
+    location: "SALA_4_ARTE_MODERNO",
+  },
+  {
+    id: "24",
+    title: "Sala ajena al recorrido",
+    datetime: "2026-11-01T10:15:00",
+    duration: 10,
+    location: "SALA_1_GRANDES_MAESTROS",
+  },
+];
 
 beforeEach(() => {
   call.mockReset();
@@ -84,6 +171,10 @@ describe("validación del body", () => {
     ["duración string", { max_duration_minutes: "120" }],
     ["cantidad boolean", { max_works_count: true }],
     ["cantidad fuera de int32", { max_works_count: 2147483648 }],
+    ["inicio no string", { start_datetime: 123 }],
+    ["inicio con formato inválido", { start_datetime: "01/11/2026 10:00" }],
+    ["inicio con mes inválido", { start_datetime: "2026-13-01T10:00" }],
+    ["inicio con día inexistente", { start_datetime: "2026-02-31T10:00" }],
     ["body array", []],
   ])("%s -> 400", async (_, body) => {
     const res = await request(app).post(URL).set(bearer()).send(body);
@@ -117,7 +208,7 @@ describe("validación del body", () => {
 });
 
 describe("éxito", () => {
-  test("VISITANTE recibe el plan combinado con eventos futuros", async () => {
+  test("VISITANTE recibe plan, agenda y eventos por sala", async () => {
     call.mockImplementation((client, method) => {
       if (method === "SearchWorksForTour") return Promise.resolve(plan);
       if (method === "GetEventsByLocations") return Promise.resolve(eventsPayload);
@@ -127,10 +218,27 @@ describe("éxito", () => {
     const res = await request(app)
       .post(URL)
       .set(bearer())
-      .send(criteria);
+      .send(startedCriteria);
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ ...plan, events: eventsPayload.events });
+    expect(res.body).toEqual({
+      ...plan,
+      start_datetime: "2026-11-01T10:00:00",
+      end_datetime: "2026-11-01T10:30:00",
+      room_schedule: [
+        {
+          room: "sala_2_impresionismo",
+          start_datetime: "2026-11-01T10:00:00",
+          end_datetime: "2026-11-01T10:20:00",
+        },
+        {
+          room: "sala_4_arte_moderno",
+          start_datetime: "2026-11-01T10:25:00",
+          end_datetime: "2026-11-01T10:30:00",
+        },
+      ],
+      events: eventsPayload.events,
+    });
     expect(call).toHaveBeenNthCalledWith(
       1,
       worksClient,
@@ -142,7 +250,61 @@ describe("éxito", () => {
       2,
       eventsClient,
       "GetEventsByLocations",
-      { locations: plan.rooms, only_future: true },
+      {
+        locations: plan.rooms,
+        only_future: false,
+        start_datetime: "2026-11-01T10:00:00",
+        end_datetime: "2026-11-01T10:30:00",
+      },
+      user,
+    );
+  });
+
+  test("agenda salas y filtra eventos por franja", async () => {
+    call.mockImplementation((client, method) => {
+      if (method === "SearchWorksForTour") return Promise.resolve(scheduledPlan);
+      if (method === "GetEventsByLocations") return Promise.resolve({ events: scheduledEvents });
+      return Promise.reject(new Error(`método inesperado: ${method}`));
+    });
+
+    const res = await request(app)
+      .post(URL)
+      .set(bearer())
+      .send(scheduledCriteria);
+
+    expect(res.status).toBe(200);
+    expect(res.body.start_datetime).toBe("2026-11-01T10:00:00");
+    expect(res.body.end_datetime).toBe("2026-11-01T10:50:00");
+    expect(res.body.room_schedule).toEqual([
+      {
+        room: "sala_2_impresionismo",
+        start_datetime: "2026-11-01T10:00:00",
+        end_datetime: "2026-11-01T10:30:00",
+      },
+      {
+        room: "sala_4_arte_moderno",
+        start_datetime: "2026-11-01T10:35:00",
+        end_datetime: "2026-11-01T10:50:00",
+      },
+    ]);
+    expect(res.body.events.map((event) => event.id)).toEqual(["20", "22", "23"]);
+    expect(call).toHaveBeenNthCalledWith(
+      1,
+      worksClient,
+      "SearchWorksForTour",
+      criteria,
+      user,
+    );
+    expect(call).toHaveBeenNthCalledWith(
+      2,
+      eventsClient,
+      "GetEventsByLocations",
+      {
+        locations: scheduledPlan.rooms,
+        only_future: false,
+        start_datetime: "2026-11-01T10:00:00",
+        end_datetime: "2026-11-01T10:50:00",
+      },
       user,
     );
   });
@@ -157,6 +319,9 @@ describe("éxito", () => {
     const res = await request(app).post(URL).set(bearer()).send({});
 
     expect(res.status).toBe(200);
+    expect(res.body.start_datetime).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/);
+    expect(res.body.end_datetime).toBeTruthy();
+    expect(res.body.room_schedule).toHaveLength(2);
     expect(call).toHaveBeenNthCalledWith(
       1,
       worksClient,
@@ -170,16 +335,58 @@ describe("éxito", () => {
       },
       user,
     );
+    expect(call).toHaveBeenNthCalledWith(
+      2,
+      eventsClient,
+      "GetEventsByLocations",
+      {
+        locations: plan.rooms,
+        only_future: false,
+        start_datetime: res.body.start_datetime,
+        end_datetime: res.body.end_datetime,
+      },
+      user,
+    );
+  });
+
+  test("start_datetime vacío usa la hora actual", async () => {
+    call.mockImplementation((client, method) => {
+      if (method === "SearchWorksForTour") return Promise.resolve(plan);
+      if (method === "GetEventsByLocations") return Promise.resolve(eventsPayload);
+      return Promise.reject(new Error(`método inesperado: ${method}`));
+    });
+
+    const res = await request(app)
+      .post(URL)
+      .set(bearer())
+      .send({ ...criteria, start_datetime: "" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.start_datetime).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/);
+    expect(res.body.room_schedule).toHaveLength(2);
+    expect(call).toHaveBeenNthCalledWith(
+      1,
+      worksClient,
+      "SearchWorksForTour",
+      criteria,
+      user,
+    );
   });
 
   test("sin salas no consulta eventos y devuelve events vacío", async () => {
     const emptyPlan = { ...plan, works: [], rooms: [] };
     call.mockResolvedValue(emptyPlan);
 
-    const res = await request(app).post(URL).set(bearer()).send(criteria);
+    const res = await request(app).post(URL).set(bearer()).send(startedCriteria);
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ ...emptyPlan, events: [] });
+    expect(res.body).toEqual({
+      ...emptyPlan,
+      start_datetime: "2026-11-01T10:00:00",
+      end_datetime: "2026-11-01T10:00:00",
+      room_schedule: [],
+      events: [],
+    });
     expect(call).toHaveBeenCalledTimes(1);
     expect(call).toHaveBeenCalledWith(
       worksClient,

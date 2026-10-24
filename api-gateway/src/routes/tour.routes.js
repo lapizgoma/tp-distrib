@@ -1,6 +1,12 @@
 import express from 'express';
 import auth from '../middleware/auth.js';
 import { sendGrpcError } from '../utils/grpcErrors.js';
+import {
+  buildRoomSchedule,
+  filterEventsBySchedule,
+  formatLocalDateTime,
+  isValidStartDatetime,
+} from '../utils/tourSchedule.js';
 
 const ARRAY_FIELDS = ['topics', 'eras', 'techniques'];
 const LIMIT_FIELDS = ['max_duration_minutes', 'max_works_count'];
@@ -21,6 +27,10 @@ function validateLimit(value, field) {
   return null;
 }
 
+function hasStartDatetime(value) {
+  return value !== undefined && value !== null && String(value).trim() !== '';
+}
+
 function validateBody(body) {
   if (body === null || typeof body !== 'object' || Array.isArray(body)) {
     return 'El body debe ser un objeto JSON';
@@ -38,6 +48,10 @@ function validateBody(body) {
       const problem = validateLimit(body[field], field);
       if (problem) return problem;
     }
+  }
+
+  if (hasStartDatetime(body.start_datetime) && !isValidStartDatetime(body.start_datetime)) {
+    return 'start_datetime debe tener formato YYYY-MM-DDTHH:mm';
   }
 
   return null;
@@ -69,19 +83,40 @@ export default function tourRoutes({ clients, call }) {
         req.user,
       );
 
+      const startDatetime = hasStartDatetime(body.start_datetime)
+        ? String(body.start_datetime).trim()
+        : formatLocalDateTime(new Date());
+      const schedule = buildRoomSchedule(plan, startDatetime);
+      if (!schedule) {
+        return res.status(400).json({
+          error: 'start_datetime debe tener formato YYYY-MM-DDTHH:mm',
+        });
+      }
+
       let events = [];
       const rooms = plan.rooms ?? [];
       if (rooms.length > 0) {
         const eventResponse = await call(
           clients.events,
           'GetEventsByLocations',
-          { locations: rooms, only_future: true },
+          {
+            locations: rooms,
+            only_future: false,
+            start_datetime: schedule.start_datetime,
+            end_datetime: schedule.end_datetime,
+          },
           req.user,
         );
-        events = eventResponse.events ?? [];
+        events = filterEventsBySchedule(eventResponse.events ?? [], schedule.room_schedule);
       }
 
-      res.json({ ...plan, events });
+      res.json({
+        ...plan,
+        start_datetime: schedule.start_datetime,
+        end_datetime: schedule.end_datetime,
+        room_schedule: schedule.room_schedule,
+        events,
+      });
     } catch (err) {
       sendGrpcError(res, err);
     }
