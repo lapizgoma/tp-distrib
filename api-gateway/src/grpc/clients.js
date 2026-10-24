@@ -16,9 +16,10 @@ function createClient(Service, url) {
   return new Service(url, grpc.credentials.createInsecure());
 }
 const works = createClient(loadPackage('work.proto').museum.works.WorkService, config.grpc.worksUrl);
+const events = createClient(loadPackage('event.proto').museum.events.EventService, config.grpc.eventsUrl);
 
 
-export const clients = { works };
+export const clients = { works, events };
 
 // Convierte el callback gRPC en promesa, con deadline y metadata del usuario.
 export function call(client, method, request, user) {
