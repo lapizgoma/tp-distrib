@@ -51,6 +51,70 @@ JOIN (
 SET e.location = seed.location,
     e.associated_era = seed.associated_era;
 
+-- 2b. Eventos demo agendados
+-- Grupo A (+2 días): recorrido completo desde las 10:00.
+-- Grupo B (+5 días): filtrar por Vanguardia y empezar a las 15:00.
+INSERT IGNORE INTO events (
+    id,
+    title,
+    description,
+    datetime,
+    duration,
+    lead_curator_id,
+    maximum_capacity,
+    event_type,
+    location,
+    associated_era
+) VALUES
+    (
+        11,
+        'Visita guiada: Grandes Maestros',
+        'Recorrido por el Renacimiento y el Barroco de la Sala 1.',
+        DATE_ADD(CURDATE(), INTERVAL 2 DAY) + INTERVAL 10 HOUR + INTERVAL 10 MINUTE,
+        60,
+        (SELECT id FROM users WHERE email = 'curador@museo.com'),
+        25,
+        'VISITA_GUIADA',
+        'SALA_1_GRANDES_MAESTROS',
+        'RENACIMIENTO'
+    ),
+    (
+        12,
+        'Charla: Impresionismo',
+        'Charla sobre luz y color en la Sala 2.',
+        DATE_ADD(CURDATE(), INTERVAL 2 DAY) + INTERVAL 10 HOUR + INTERVAL 40 MINUTE,
+        60,
+        (SELECT id FROM users WHERE email = 'curador2@museo.com'),
+        40,
+        'CHARLA',
+        'SALA_2_IMPRESIONISMO',
+        'IMPRESIONISMO'
+    ),
+    (
+        13,
+        'Visita guiada: Vanguardias',
+        'Recorrido por las obras de vanguardia de la Sala 3.',
+        DATE_ADD(CURDATE(), INTERVAL 5 DAY) + INTERVAL 15 HOUR + INTERVAL 10 MINUTE,
+        45,
+        (SELECT id FROM users WHERE email = 'curador@museo.com'),
+        25,
+        'VISITA_GUIADA',
+        'SALA_3_VANGUARDIAS',
+        'VANGUARDIA'
+    ),
+    (
+        14,
+        'Taller: arte moderno',
+        'Taller práctico inspirado en las obras de la Sala 4.',
+        DATE_ADD(CURDATE(), INTERVAL 5 DAY) + INTERVAL 15 HOUR + INTERVAL 40 MINUTE,
+        90,
+        (SELECT id FROM users WHERE email = 'curador2@museo.com'),
+        20,
+        'TALLER',
+        'SALA_4_ARTE_MODERNO',
+        'VANGUARDIA'
+    );
+
 -- 3. Preferencias de usuario
 -- Los IDs se resuelven por email porque users usa AUTO_INCREMENT.
 SET @visitanteId := (SELECT id FROM users WHERE email = 'visitante@museo.com');
