@@ -9,7 +9,7 @@ const config = {
   jwt: {
     secret: process.env.JWT_SECRET_BASE64 === 'true' ? Buffer.from(secret, 'base64') : secret,
     algorithm: process.env.JWT_ALGORITHM || 'HS256',
-    claimId: process.env.JWT_CLAIM_ID || 'sub',
+    claimId: process.env.JWT_CLAIM_ID || 'userId',
     claimRole: process.env.JWT_CLAIM_ROLE || 'role',
   },
   grpc: {
