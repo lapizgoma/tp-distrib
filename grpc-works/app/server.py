@@ -12,6 +12,13 @@ from app.config import load_env
 from app.generated import work_pb2_grpc
 
 
+from app.cases.get_works_for_comparison import (
+    InvalidComparisonRequest,
+    WorksNotFound,
+    get_works_for_comparison,
+)
+
+
 class WorkServiceServicer(work_pb2_grpc.WorkServiceServicer):
     """Implementación gRPC del servicio de obras."""
 
@@ -24,6 +31,21 @@ class WorkServiceServicer(work_pb2_grpc.WorkServiceServicer):
             context.abort(grpc.StatusCode.INTERNAL, "database error")
         except Exception:
             logging.exception("SearchWorksForTour unexpected error")
+            context.abort(grpc.StatusCode.INTERNAL, "internal error")
+
+    def GetWorksForComparison(self, request, context):
+        """Devuelve las obras a comparar, en el orden pedido."""
+        try:
+            return get_works_for_comparison(request)
+        except InvalidComparisonRequest as error:
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(error))
+        except WorksNotFound as error:
+            context.abort(grpc.StatusCode.NOT_FOUND, str(error))
+        except mysql.connector.Error:
+            logging.exception("GetWorksForComparison database error")
+            context.abort(grpc.StatusCode.INTERNAL, "database error")
+        except Exception:
+            logging.exception("GetWorksForComparison unexpected error")
             context.abort(grpc.StatusCode.INTERNAL, "internal error")
 
 
