@@ -137,6 +137,12 @@ def is_exhibited(work: WorkCandidate) -> bool:
     return normalize_text(work.availability) == "en exhibicion"
 
 
+def has_tour_location(work: WorkCandidate) -> bool:
+    """Indica si la obra está ubicada en una sala visitable del museo."""
+    location = canonical_location(work.location)
+    return bool(location) and location != "deposito"
+
+
 def room_rank(location: str) -> tuple[int, str]:
     """Devuelve el orden de la sala y su nombre canónico."""
     canonical = canonical_location(location)
@@ -201,6 +207,17 @@ def calculate_total_duration(
     return works_duration + transitions
 
 
+def tour_rooms(works: list[WorkCandidate]) -> list[str]:
+    """Devuelve las salas del recorrido en orden de visita, sin repetir."""
+    return list(
+        dict.fromkeys(
+            canonical_location(work.location)
+            for work in works
+            if has_tour_location(work)
+        )
+    )
+
+
 def plan_tour(
     works: list[WorkCandidate],
     topics=(),
@@ -225,6 +242,7 @@ def plan_tour(
         work
         for work in works
         if is_exhibited(work)
+        and has_tour_location(work)
         and matches_filters(work, topic_filters, era_filters, technique_filters)
     ]
 
@@ -259,3 +277,60 @@ def plan_tour(
         total_duration += cost
 
     return order_tour(selected)
+
+
+def _relaxed_note(relaxed: list[str]) -> str:
+    """Redacta la nota que explica qué criterio se relajó."""
+    if relaxed == ["técnica"]:
+        return "No se encontraron obras con las técnicas seleccionadas; se amplió el criterio."
+    if relaxed == ["era"]:
+        return "No se encontraron obras con la era seleccionada; se amplió el criterio."
+    return "No se encontraron obras con las técnicas ni la era seleccionadas; se amplió el criterio."
+
+
+def plan_tour_with_fallback(
+    works: list[WorkCandidate],
+    topics=(),
+    eras=(),
+    techniques=(),
+    max_duration_minutes: int = 0,
+    max_works_count: int = 0,
+    transition_minutes: int = ROOM_TRANSITION_MINUTES,
+) -> tuple[list[WorkCandidate], list[str]]:
+    """Planifica el tour y relaja técnica/era si no hay coincidencias.
+
+    Los temas no se relajan: si no hay obras del tema pedido, devuelve un tour
+    vacío con una nota explicando el motivo.
+    """
+    def plan(topics_value, eras_value, techniques_value):
+        return plan_tour(
+            works,
+            topics=topics_value,
+            eras=eras_value,
+            techniques=techniques_value,
+            max_duration_minutes=max_duration_minutes,
+            max_works_count=max_works_count,
+            transition_minutes=transition_minutes,
+        )
+
+    selected = plan(topics, eras, techniques)
+    if selected:
+        return selected, []
+
+    relaxed: list[str] = []
+    if any(normalize_text(technique) for technique in techniques):
+        relaxed.append("técnica")
+        selected = plan(topics, eras, ())
+        if selected:
+            return selected, [_relaxed_note(relaxed)]
+
+    if any(normalize_text(era) for era in eras):
+        relaxed.append("era")
+        selected = plan(topics, (), ())
+        if selected:
+            return selected, [_relaxed_note(relaxed)]
+
+    if any(normalize_text(topic) for topic in topics):
+        return [], ["No se encontraron obras que coincidan con los temas seleccionados."]
+
+    return [], ["No se encontraron obras disponibles para los criterios y límites indicados."]

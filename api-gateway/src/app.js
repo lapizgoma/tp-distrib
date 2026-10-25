@@ -1,5 +1,6 @@
 import express from 'express';
 import comparisonRoutes from './routes/comparison.routes.js';
+import tourRoutes from './routes/tour.routes.js';
 
 // No importa los clientes reales: los recibe por parámetro (así los tests no tocan los .proto).
 export function createApp(deps) {
@@ -8,7 +9,8 @@ export function createApp(deps) {
 
   app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
-  app.use('/api/grpc', comparisonRoutes(deps));   
+  app.use('/api/grpc', comparisonRoutes(deps));
+  app.use('/api/grpc', tourRoutes(deps));
 
   app.use((req, res) => res.status(404).json({ error: 'Ruta no encontrada' }));
 
