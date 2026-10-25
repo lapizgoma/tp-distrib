@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useWork } from '../hooks/useWork';
 import { addComment } from '../api/commentsRestApi';
 import { AVAILABILITY_LABELS, LOCATION_LABELS, ERA_LABELS, TECHNIQUE_LABELS } from '../types/works.types';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
 export function WorkDetailView() {
+  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { work, loading, error, refetch } = useWork(id);
 
@@ -48,9 +49,9 @@ export function WorkDetailView() {
     return (
       <div className="container mx-auto px-4 py-12 max-w-2xl text-center space-y-4">
         <p className="text-destructive font-semibold text-lg">{error || 'Obra no encontrada'}</p>
-        <Button variant="outline" render={<Link to="/obras" />}>
+        <Button variant="outline" onClick={() => navigate(-1)}>
           <ArrowLeft className="size-4 mr-2" />
-          Volver al catálogo
+          Volver
         </Button>
       </div>
     );
@@ -60,10 +61,10 @@ export function WorkDetailView() {
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8 max-w-5xl">
-      {/* Botón Volver */}
-      <Button variant="ghost" size="sm" render={<Link to="/obras" />} className="gap-2">
+      {/* Botón Volver dinámico*/}
+      <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="gap-2">
         <ArrowLeft className="size-4" />
-        Volver al catálogo
+        Volver
       </Button>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">

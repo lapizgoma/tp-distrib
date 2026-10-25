@@ -101,9 +101,9 @@ export function EventDetailView() {
           <AlertTitle>No pudimos cargar el evento</AlertTitle>
           <AlertDescription>{error ?? 'Evento no encontrado.'}</AlertDescription>
         </Alert>
-        <Button variant="link" className="mt-4" render={<Link to="/eventos" />}>
+        <Button variant="link" className="mt-4" onClick={() => navigate(-1)}>
           <ArrowLeft className="size-4" />
-          Volver a la cartelera
+          Volver
         </Button>
       </div>
     );
@@ -114,9 +114,9 @@ export function EventDetailView() {
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
-      <Button variant="ghost" size="sm" className="w-fit" render={<Link to="/eventos" />}>
+      <Button variant="ghost" size="sm" className="w-fit" onClick={() => navigate(-1)}>
         <ArrowLeft className="size-4" />
-        Volver a la cartelera
+        Volver
       </Button>
 
       {/* Encabezado */}
