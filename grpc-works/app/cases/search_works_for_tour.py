@@ -8,8 +8,10 @@ from app.generated import work_pb2
 from .tour_planner import (
     ROOM_TRANSITION_MINUTES,
     WorkCandidate,
+    calculate_total_duration,
     parse_topics,
-    plan_tour,
+    plan_tour_with_fallback,
+    tour_rooms,
 )
 
 WORKS_QUERY = """
@@ -85,6 +87,7 @@ def candidate_to_proto(work: WorkCandidate) -> work_pb2.Work:
         location=work.location,
         availability=work.availability,
         estimated_duration_minutes=work.estimated_duration_minutes,
+        topics=list(work.topics),
     )
 
 
@@ -93,21 +96,26 @@ def fetch_work_candidates() -> list[WorkCandidate]:
     return [row_to_candidate(row) for row in fetch_all(WORKS_QUERY)]
 
 
-def search_works_for_tour(request) -> work_pb2.WorkListResponse:
+def search_works_for_tour(request) -> work_pb2.TourPlanResponse:
     """Filtra y ordena las obras para responder un TourCriteriaRequest.
 
-    Delega la selección en ``plan_tour`` usando los filtros y límites del request.
+    Delega la selección en ``plan_tour_with_fallback`` y agrega la duración
+    total y las salas para que el orquestador pueda consultar los eventos.
     """
     candidates = fetch_work_candidates()
-    selected = plan_tour(
+    transition_minutes = _room_transition_minutes()
+    selected, notes = plan_tour_with_fallback(
         candidates,
         topics=request.topics,
         eras=request.eras,
         techniques=request.techniques,
         max_duration_minutes=request.max_duration_minutes,
         max_works_count=request.max_works_count,
-        transition_minutes=_room_transition_minutes(),
+        transition_minutes=transition_minutes,
     )
-    return work_pb2.WorkListResponse(
+    return work_pb2.TourPlanResponse(
         works=[candidate_to_proto(work) for work in selected],
+        total_duration_minutes=calculate_total_duration(selected, transition_minutes),
+        rooms=tour_rooms(selected),
+        notes=notes,
     )

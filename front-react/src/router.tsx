@@ -9,6 +9,7 @@ import { LoginView } from "@/features/auth/views/LoginView";
 import { RegisterView } from "@/features/auth/views/RegisterView";
 import { WorksListView } from "@/features/works/views/WorksListView";
 import { WorkDetailView } from "@/features/works/views/WorkDetailView";
+import { TourPlannerView } from "@/features/tour/views/TourPlannerView";
 import { ReportView } from "./features/reports/views/ReportView";
 
 export function AppRouter() {
@@ -31,6 +32,11 @@ export function AppRouter() {
                     <Route path="catalogo" element={<Navigate to="/obras" replace />} />
                     <Route path="obras" element={<WorksListView />} />
                     <Route path="obras/:id" element={<WorkDetailView />} />
+
+                    {/* Solo VISITANTE */}
+                    <Route element={<RequireRole roles={['VISITANTE']} />}>
+                        <Route path="recorrido" element={<TourPlannerView />} />
+                    </Route>
 
                     {/* Cualquier usuario con sesión */}
                     <Route element={<RequireRole />}>

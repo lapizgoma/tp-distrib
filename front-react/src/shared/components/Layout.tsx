@@ -21,9 +21,13 @@ export function Layout() {
 
   const user = useAuthStore((state) => state.user);
   const canSeeReport = user?.role === 'CURADOR' || user?.role === 'ADMINISTRADOR';
-  const finalNavItems = canSeeReport
-    ? [{ to: '/eventos/reporte', label: 'Reporte', end: false }, ...navItems]
+  const isVisitor = user?.role === 'VISITANTE';
+  const roleNavItems = isVisitor
+    ? [...navItems, { to: '/recorrido', label: 'Armar recorrido', end: true }]
     : navItems;
+  const finalNavItems = canSeeReport
+    ? [{ to: '/eventos/reporte', label: 'Reporte', end: false }, ...roleNavItems]
+    : roleNavItems;
 
   const handleLogout = () => {
     logout();
