@@ -11,6 +11,7 @@ import { WorksListView } from "@/features/works/views/WorksListView";
 import { WorkDetailView } from "@/features/works/views/WorkDetailView";
 import { TourPlannerView } from "@/features/tour/views/TourPlannerView";
 import { ReportView } from "./features/reports/views/ReportView";
+import { CompareWorksView } from "./features/works/components/CompareWorksView";
 
 export function AppRouter() {
     return (
@@ -41,6 +42,7 @@ export function AppRouter() {
                     {/* Cualquier usuario con sesión */}
                     <Route element={<RequireRole />}>
                         <Route path="eventos/mis-filtros" element={<SavedFiltersView />} />
+                        <Route path="comparar" element={<CompareWorksView />} />
                     </Route>
 
                     {/* Solo CURADOR y ADMINISTRADOR */}
