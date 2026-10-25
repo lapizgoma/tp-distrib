@@ -67,7 +67,7 @@ export function WorkDetailView() {
       </Button>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-        <div className="rounded-xl overflow-hidden bg-muted border border-border h-80 md:h-[420px] flex items-center justify-center relative shadow-sm">
+        <div className="rounded-xl overflow-hidden bg-muted border border-border h-80 md:h-105 flex items-center justify-center relative shadow-sm">
           {work.image_url ? (
             <img src={work.image_url} alt={work.title} className="w-full h-full object-cover" />
           ) : (
