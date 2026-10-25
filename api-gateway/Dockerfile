@@ -1,5 +1,5 @@
 FROM node:24-alpine
-# Misma estructura que en el repo: /app/api-gateway y /app/protos
+
 WORKDIR /app/api-gateway
 
 COPY package*.json ./
