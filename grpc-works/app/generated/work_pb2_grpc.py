@@ -38,7 +38,7 @@ class WorkServiceStub:
         self.SearchWorksForTour = channel.unary_unary(
                 '/museum.works.WorkService/SearchWorksForTour',
                 request_serializer=work__pb2.TourCriteriaRequest.SerializeToString,
-                response_deserializer=work__pb2.WorkListResponse.FromString,
+                response_deserializer=work__pb2.TourPlanResponse.FromString,
                 _registered_method=True)
         self.GetWorksForComparison = channel.unary_unary(
                 '/museum.works.WorkService/GetWorksForComparison',
@@ -95,7 +95,7 @@ def add_WorkServiceServicer_to_server(servicer, server):
             'SearchWorksForTour': grpc.unary_unary_rpc_method_handler(
                     servicer.SearchWorksForTour,
                     request_deserializer=work__pb2.TourCriteriaRequest.FromString,
-                    response_serializer=work__pb2.WorkListResponse.SerializeToString,
+                    response_serializer=work__pb2.TourPlanResponse.SerializeToString,
             ),
             'GetWorksForComparison': grpc.unary_unary_rpc_method_handler(
                     servicer.GetWorksForComparison,
@@ -140,7 +140,7 @@ class WorkService:
             target,
             '/museum.works.WorkService/SearchWorksForTour',
             work__pb2.TourCriteriaRequest.SerializeToString,
-            work__pb2.WorkListResponse.FromString,
+            work__pb2.TourPlanResponse.FromString,
             options,
             channel_credentials,
             insecure,

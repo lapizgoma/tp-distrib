@@ -1,6 +1,4 @@
-api-gateway/node_modules
-api-gateway/test
-api-gateway/.env
-**/.git
-**/.venv
-**/__pycache__
+node_modules
+test
+.env
+.git

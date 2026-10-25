@@ -1,6 +1,6 @@
 """Consultas y conversiones compartidas por los casos de eventos."""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from app.db import fetch_all
 from app.generated import event_pb2
@@ -36,6 +36,76 @@ def format_datetime(value) -> str:
     if "T" not in text and " " in text:
         return text.replace(" ", "T", 1)
     return text
+
+
+def parse_datetime(value) -> datetime | None:
+    """Convierte un valor de fecha en datetime; devuelve None si no se puede."""
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text.replace(" ", "T", 1))
+    except ValueError:
+        return None
+
+
+def filter_rows_by_future(
+    rows: list[dict],
+    now: datetime | None = None,
+) -> list[dict]:
+    """Filtra eventos cuya fecha es igual o posterior a ``now``."""
+    reference = now or datetime.now()
+    filtered = []
+    for row in rows:
+        event_datetime = parse_datetime(row.get("datetime"))
+        if event_datetime is not None and event_datetime >= reference:
+            filtered.append(row)
+    return filtered
+
+
+def _duration_minutes(row: dict) -> int:
+    """Devuelve la duración del evento en minutos, nunca negativa."""
+    try:
+        return max(0, int(row.get("duration") or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def filter_rows_by_window(
+    rows: list[dict],
+    start_datetime,
+    end_datetime,
+) -> list[dict]:
+    """Filtra eventos que se solapan con la ventana indicada.
+
+    Un evento sin duración cuenta solo si empieza dentro de la ventana.
+    """
+    window_start = parse_datetime(start_datetime)
+    window_end = parse_datetime(end_datetime)
+    if window_start is None or window_end is None or window_end <= window_start:
+        return []
+
+    filtered = []
+    for row in rows:
+        event_start = parse_datetime(row.get("datetime"))
+        if event_start is None:
+            continue
+
+        duration = _duration_minutes(row)
+        if duration == 0:
+            if window_start <= event_start < window_end:
+                filtered.append(row)
+            continue
+
+        event_end = event_start + timedelta(minutes=duration)
+        if event_start < window_end and event_end > window_start:
+            filtered.append(row)
+
+    return filtered
 
 
 def row_to_event(row: dict) -> event_pb2.Event:
