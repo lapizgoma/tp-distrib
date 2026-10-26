@@ -140,6 +140,24 @@ class SearchWorksForTourMappingTest(unittest.TestCase):
         self.assertEqual(list(response.rooms), ["sala_2_impresionismo"])
         self.assertEqual(list(response.notes), [])
 
+    def test_case_applies_preferred_fields(self):
+        candidates = [
+            make_candidate(id=1, topic="Nature"),
+            make_candidate(id=2, topics="Mythology", technique="TEMPLE", era="RENACIMIENTO"),
+        ]
+        request = work_pb2.TourCriteriaRequest(
+            max_works_count=1,
+            preferred_topics=["Mythology"],
+        )
+
+        with patch(
+            "app.cases.search_works_for_tour.fetch_work_candidates",
+            return_value=candidates,
+        ):
+            response = search_works_for_tour(request)
+
+        self.assertEqual([work.id for work in response.works], [2])
+
     def test_case_returns_plan_metadata(self):
         candidates = [
             make_candidate(id=1, location="SALA_4_ARTE_MODERNO", creation_year=1889),

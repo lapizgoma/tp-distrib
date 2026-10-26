@@ -1,4 +1,5 @@
 import express from 'express';
+import config from '../config.js';
 import auth from '../middleware/auth.js';
 import { sendGrpcError } from '../utils/grpcErrors.js';
 import {
@@ -11,6 +12,45 @@ import {
 const ARRAY_FIELDS = ['topics', 'eras', 'techniques'];
 const LIMIT_FIELDS = ['max_duration_minutes', 'max_works_count'];
 const INT32_MAX = 2147483647;
+
+function emptyPreferences() {
+  return {
+    preferred_topics: [],
+    preferred_eras: [],
+    preferred_techniques: [],
+  };
+}
+
+function preferencesToCriteria(preferences) {
+  return {
+    preferred_topics: preferences?.favorite_topics ?? [],
+    preferred_eras: preferences?.favorite_eras ?? [],
+    preferred_techniques: preferences?.favorite_techniques ?? [],
+  };
+}
+
+async function loadPreferences(call, clients, user) {
+  const userId = Number(user.id);
+  if (!Number.isSafeInteger(userId) || userId <= 0) {
+    console.error('No se pudieron cargar preferencias: id de usuario inválido');
+    return emptyPreferences();
+  }
+
+  try {
+    const profile = await call(
+      clients.users,
+      'GetUserProfile',
+      { user_id: userId },
+      user,
+      config.grpc.usersDeadlineMs,
+    );
+    return preferencesToCriteria(profile?.preferences);
+  } catch (err) {
+    // Las preferencias son opcionales: el tour sigue sin personalizar.
+    console.error('No se pudieron cargar preferencias:', err?.details ?? err?.message ?? err);
+    return emptyPreferences();
+  }
+}
 
 function validateStringArray(value, field) {
   if (!Array.isArray(value)) return `${field} debe ser un array`;
@@ -54,6 +94,10 @@ function validateBody(body) {
     return 'start_datetime debe tener formato YYYY-MM-DDTHH:mm';
   }
 
+  if (body.use_preferences !== undefined && typeof body.use_preferences !== 'boolean') {
+    return 'use_preferences debe ser un booleano';
+  }
+
   return null;
 }
 
@@ -76,10 +120,15 @@ export default function tourRoutes({ clients, call }) {
     if (problem) return res.status(400).json({ error: problem });
 
     try {
+      const preferences = body.use_preferences === false
+        ? emptyPreferences()
+        : await loadPreferences(call, clients, req.user);
+      const criteria = { ...toCriteria(body), ...preferences };
+
       const plan = await call(
         clients.works,
         'SearchWorksForTour',
-        toCriteria(body),
+        criteria,
         req.user,
       );
 

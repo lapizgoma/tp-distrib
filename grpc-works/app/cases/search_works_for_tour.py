@@ -111,6 +111,9 @@ def search_works_for_tour(request) -> work_pb2.TourPlanResponse:
         techniques=request.techniques,
         max_duration_minutes=request.max_duration_minutes,
         max_works_count=request.max_works_count,
+        preferred_topics=request.preferred_topics,
+        preferred_eras=request.preferred_eras,
+        preferred_techniques=request.preferred_techniques,
         transition_minutes=transition_minutes,
     )
     return work_pb2.TourPlanResponse(
