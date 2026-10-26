@@ -48,10 +48,8 @@ message CompareWorksRequest {
 
 // Req 3: Work Recommendations
 message RecommendationCriteriaRequest {
-  repeated string favorite_themes = 1;
-  repeated string favorite_techniques = 2;
-  repeated int64 viewed_work_ids = 3;
-  int32 limit = 4;
+  int64 user_id = 1;
+  int32 limit = 2;
 }
 
 // Req 4: Advanced Exploration

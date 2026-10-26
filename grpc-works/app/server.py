@@ -8,6 +8,7 @@ import grpc
 import mysql.connector
 
 from app.cases.search_works_for_tour import search_works_for_tour
+from app.cases.get_recommended_works import get_recommended_works
 from app.cases.get_works_and_artists_by_era import get_works_and_artists_by_era
 from app.config import load_env
 from app.generated import work_pb2_grpc
@@ -44,6 +45,18 @@ class WorkServiceServicer(work_pb2_grpc.WorkServiceServicer):
         except Exception:
             logging.exception("GetWorksAndArtistsByEra unexpected error")
             context.abort(grpc.StatusCode.INTERNAL, "internal error")
+
+    def GetRecommendedWorks(self, request, context):
+        """Devuelve obras recomendadas según preferencias e interacciones."""
+        try:
+            return get_recommended_works(request)
+        except mysql.connector.Error:
+            logging.exception("GetRecommendedWorks database error")
+            context.abort(grpc.StatusCode.INTERNAL, "database error")
+        except Exception:
+            logging.exception("GetRecommendedWorks unexpected error")
+            context.abort(grpc.StatusCode.INTERNAL, "internal error")
+
     def GetWorksForComparison(self, request, context):
         """Devuelve las obras a comparar, en el orden pedido."""
         try:
