@@ -7,6 +7,7 @@ import { EventFormView } from "@/features/events/views/EventFormView";
 import { SavedFiltersView } from "@/features/events/views/SavedFiltersView";
 import { LoginView } from "@/features/auth/views/LoginView";
 import { RegisterView } from "@/features/auth/views/RegisterView";
+import { ProfileView } from "@/features/profile/views/ProfileView";
 import { WorksListView } from "@/features/works/views/WorksListView";
 import { WorkDetailView } from "@/features/works/views/WorkDetailView";
 import { TourPlannerView } from "@/features/tour/views/TourPlannerView";
@@ -42,6 +43,7 @@ export function AppRouter() {
 
                     {/* Cualquier usuario con sesión */}
                     <Route element={<RequireRole />}>
+                        <Route path="perfil" element={<ProfileView />} />
                         <Route path="eventos/mis-filtros" element={<SavedFiltersView />} />
                         <Route path="comparar" element={<CompareWorksView />} />
                         <Route path="explorar" element={<ExplorationView />} />
