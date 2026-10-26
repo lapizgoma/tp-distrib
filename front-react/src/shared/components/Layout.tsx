@@ -29,6 +29,9 @@ export function Layout() {
   const finalNavItems = canSeeReport
     ? [{ to: '/eventos/reporte', label: 'Reporte', end: false }, ...roleNavItems]
     : roleNavItems;
+  const visibleNavItems = isLogged
+    ? [...finalNavItems, { to: '/perfil', label: 'Mi perfil', end: true }]
+    : finalNavItems;
 
   const handleLogout = () => {
     logout();
@@ -49,7 +52,7 @@ export function Layout() {
             </span>
           </Link>
 
-          {finalNavItems.map((item) => (
+          {visibleNavItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
