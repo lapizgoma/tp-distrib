@@ -10,6 +10,7 @@ from app.cases.tour_planner import (
     parse_topics,
     plan_tour,
     plan_tour_with_fallback,
+    preference_score,
     tour_rooms,
 )
 
@@ -231,6 +232,55 @@ class TourPlannerTest(unittest.TestCase):
 
         self.assertEqual(selected, [])
         self.assertIn("temas", notes[0])
+
+    def test_preferences_prioritize_works_without_excluding(self):
+        works = [
+            make_work(1, topic="Nature"),
+            make_work(2, topic="Mythology"),
+        ]
+
+        result = plan_tour(
+            works,
+            max_works_count=1,
+            preferred_topics=["Mythology"],
+        )
+        not_matching = plan_tour(works, preferred_topics=["Portrait"])
+
+        self.assertEqual([work.id for work in result], [2])
+        self.assertEqual({work.id for work in not_matching}, {1, 2})
+
+    def test_preference_score_caps_topics_and_adds_era_and_technique(self):
+        work = make_work(
+            1,
+            topic="Nature,Mythology,Portrait",
+            era="IMPRESIONISMO",
+            technique="OLEO",
+        )
+
+        score = preference_score(
+            work,
+            {"nature", "mythology", "portrait"},
+            {"impresionismo"},
+            {"oleo"},
+        )
+
+        self.assertEqual(score, 6)
+
+    def test_preferences_are_normalized(self):
+        works = [
+            make_work(1, topic="Nature", era="CONTEMPORANEO", technique="ACRILICO"),
+            make_work(2, topic="Nature", era="IMPRESIONISMO", technique="OLEO"),
+        ]
+
+        result = plan_tour(
+            works,
+            max_works_count=1,
+            preferred_topics=["nature"],
+            preferred_eras=["Arte Contemporáneo"],
+            preferred_techniques=["acrílico"],
+        )
+
+        self.assertEqual([work.id for work in result], [1])
 
 
 if __name__ == "__main__":

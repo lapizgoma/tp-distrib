@@ -149,20 +149,62 @@ def room_rank(location: str) -> tuple[int, str]:
     return ROOM_ORDER.get(canonical, 99), canonical
 
 
+PREFERRED_TOPIC_SCORE = 2
+MAX_PREFERRED_TOPIC_SCORE = 4
+PREFERRED_ERA_SCORE = 1
+PREFERRED_TECHNIQUE_SCORE = 1
+
+
+def preference_score(
+    work: WorkCandidate,
+    preferred_topics: set[str],
+    preferred_eras: set[str],
+    preferred_techniques: set[str],
+) -> int:
+    """Suma puntos por coincidencias con las preferencias del usuario.
+
+    Es una señal blanda: nunca excluye obras. Los topics suman como máximo
+    ``MAX_PREFERRED_TOPIC_SCORE`` para que una obra con muchos temas no domine.
+    """
+    topic_matches = len(set(work.topics).intersection(preferred_topics))
+    topic_score = min(topic_matches * PREFERRED_TOPIC_SCORE, MAX_PREFERRED_TOPIC_SCORE)
+    era_score = PREFERRED_ERA_SCORE if canonical_era(work.era) in preferred_eras else 0
+    technique_score = (
+        PREFERRED_TECHNIQUE_SCORE
+        if canonical_technique(work.technique) in preferred_techniques
+        else 0
+    )
+    return topic_score + era_score + technique_score
+
+
 def relevance_score(
     work: WorkCandidate,
     topic_filters: set[str],
     era_filters: set[str],
     technique_filters: set[str],
+    preferred_topics: set[str] | None = None,
+    preferred_eras: set[str] | None = None,
+    preferred_techniques: set[str] | None = None,
 ) -> int:
-    """Calcula la prioridad de una obra según los filtros activos.
+    """Calcula la prioridad de una obra según filtros y preferencias.
 
-    Cada topic coincide con 3 puntos; era y técnica suman 2 puntos cada una.
+    Cada topic de filtro coincide con 3 puntos; era y técnica suman 2 puntos
+    cada una. Las preferencias suman aparte, sin excluir obras.
     """
     topic_matches = len(set(work.topics).intersection(topic_filters))
     era_match = 1 if canonical_era(work.era) in era_filters else 0
     technique_match = 1 if canonical_technique(work.technique) in technique_filters else 0
-    return topic_matches * 3 + era_match * 2 + technique_match * 2
+    return (
+        topic_matches * 3
+        + era_match * 2
+        + technique_match * 2
+        + preference_score(
+            work,
+            preferred_topics or set(),
+            preferred_eras or set(),
+            preferred_techniques or set(),
+        )
+    )
 
 
 def matches_filters(
@@ -225,17 +267,32 @@ def plan_tour(
     techniques=(),
     max_duration_minutes: int = 0,
     max_works_count: int = 0,
+    preferred_topics=(),
+    preferred_eras=(),
+    preferred_techniques=(),
     transition_minutes: int = ROOM_TRANSITION_MINUTES,
 ) -> list[WorkCandidate]:
     """Selecciona obras para el tour y las devuelve en orden de visita.
 
-    Aplica los filtros, prioriza coincidencias y respeta los límites de duración
-    y cantidad. Los límites en cero significan sin restricción.
+    Aplica los filtros, prioriza coincidencias y preferencias, y respeta los
+    límites de duración y cantidad. Los límites en cero significan sin
+    restricción. Las preferencias solo afectan el orden: nunca excluyen obras.
     """
     topic_filters = {normalize_text(topic) for topic in topics if normalize_text(topic)}
     era_filters = {canonical_era(era) for era in eras if normalize_text(era)}
     technique_filters = {
         canonical_technique(technique) for technique in techniques if normalize_text(technique)
+    }
+    preferred_topic_filters = {
+        normalize_text(topic) for topic in preferred_topics if normalize_text(topic)
+    }
+    preferred_era_filters = {
+        canonical_era(era) for era in preferred_eras if normalize_text(era)
+    }
+    preferred_technique_filters = {
+        canonical_technique(technique)
+        for technique in preferred_techniques
+        if normalize_text(technique)
     }
 
     candidates = [
@@ -248,7 +305,15 @@ def plan_tour(
 
     candidates.sort(
         key=lambda work: (
-            -relevance_score(work, topic_filters, era_filters, technique_filters),
+            -relevance_score(
+                work,
+                topic_filters,
+                era_filters,
+                technique_filters,
+                preferred_topic_filters,
+                preferred_era_filters,
+                preferred_technique_filters,
+            ),
             max(0, int(work.estimated_duration_minutes)),
             work.id,
         )
@@ -295,12 +360,16 @@ def plan_tour_with_fallback(
     techniques=(),
     max_duration_minutes: int = 0,
     max_works_count: int = 0,
+    preferred_topics=(),
+    preferred_eras=(),
+    preferred_techniques=(),
     transition_minutes: int = ROOM_TRANSITION_MINUTES,
 ) -> tuple[list[WorkCandidate], list[str]]:
     """Planifica el tour y relaja técnica/era si no hay coincidencias.
 
     Los temas no se relajan: si no hay obras del tema pedido, devuelve un tour
-    vacío con una nota explicando el motivo.
+    vacío con una nota explicando el motivo. Las preferencias se mantienen en
+    todos los intentos porque solo afectan el orden.
     """
     def plan(topics_value, eras_value, techniques_value):
         return plan_tour(
@@ -310,6 +379,9 @@ def plan_tour_with_fallback(
             techniques=techniques_value,
             max_duration_minutes=max_duration_minutes,
             max_works_count=max_works_count,
+            preferred_topics=preferred_topics,
+            preferred_eras=preferred_eras,
+            preferred_techniques=preferred_techniques,
             transition_minutes=transition_minutes,
         )
 
