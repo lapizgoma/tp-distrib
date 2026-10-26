@@ -24,6 +24,7 @@ public class CommentService {
     private final CommentRepository commentRepository;
     private final WorkRepository workRepository;
     private final UserRepository userRepository;
+    private final UserWorkInteractionService userWorkInteractionService;
 
     @Transactional(readOnly = true)
     public List<CommentResponseDTO> getCommentsByWorkId(Long workId) {
@@ -46,6 +47,8 @@ public class CommentService {
 
         Comment comment = Comment.of(user, work, request.getText());
         Comment savedComment = commentRepository.save(comment);
+
+        userWorkInteractionService.recordComment(user, work);
 
         return CommentResponseDTO.fromEntity(savedComment);
     }
