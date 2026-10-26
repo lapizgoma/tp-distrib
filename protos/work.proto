@@ -28,6 +28,9 @@ message TourCriteriaRequest {
   repeated string techniques = 3;
   int32 max_duration_minutes = 4;
   int32 max_works_count = 5;
+  repeated string preferred_topics = 6;
+  repeated string preferred_eras = 7;
+  repeated string preferred_techniques = 8;
 }
 
 message WorkListResponse {
