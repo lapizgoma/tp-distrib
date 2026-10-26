@@ -17,6 +17,7 @@ const config = {
     usersUrl: process.env.GRPC_USERS_URL || 'localhost:50053',
     eventsUrl: process.env.GRPC_EVENTS_URL || 'localhost:50052',
     deadlineMs: 5000,
+    usersDeadlineMs: Number(process.env.GRPC_USERS_DEADLINE_MS) || 1500,
   },
   protosDir: process.env.PROTOS_DIR || path.resolve(__dirname, '../../protos'),
 };

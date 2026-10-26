@@ -183,6 +183,7 @@ services:
     depends_on:
       - grpc-works
       - grpc-events
+      - grpc-users
 
 volumes:
   mysql-data:

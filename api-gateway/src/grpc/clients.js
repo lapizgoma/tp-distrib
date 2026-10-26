@@ -17,17 +17,18 @@ function createClient(Service, url) {
 }
 const works = createClient(loadPackage('work.proto').museum.works.WorkService, config.grpc.worksUrl);
 const events = createClient(loadPackage('event.proto').museum.events.EventService, config.grpc.eventsUrl);
+const users = createClient(loadPackage('user.proto').museum.users.UserService, config.grpc.usersUrl);
 
 
-export const clients = { works, events };
+export const clients = { works, events, users };
 
 // Convierte el callback gRPC en promesa, con deadline y metadata del usuario.
-export function call(client, method, request, user) {
+export function call(client, method, request, user, deadlineMs = config.grpc.deadlineMs) {
   return new Promise((resolve, reject) => {
     const metadata = new grpc.Metadata();
     metadata.set('x-user-id', String(user.id));
     metadata.set('x-user-rol', String(user.rol));
-    const deadline = new Date(Date.now() + config.grpc.deadlineMs);
+    const deadline = new Date(Date.now() + deadlineMs);
 
     client[method](request, metadata, { deadline }, (err, response) => {
       if (err) return reject(err);
