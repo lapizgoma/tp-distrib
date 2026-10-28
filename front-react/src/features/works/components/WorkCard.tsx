@@ -7,9 +7,11 @@ import { Button } from '@/components/ui/button';
 
 interface WorkCardProps {
   work: Work;
+  /** Oculta la cantidad de comentarios cuando el contexto no la trae. */
+  showComments?: boolean;
 }
 
-export function WorkCard({ work }: WorkCardProps) {
+export function WorkCard({ work, showComments = true }: WorkCardProps) {
   const isAvailable = work.availability === 'EN_EXHIBICION';
   const locationText = LOCATION_LABELS[work.location] || work.location || 'Ubicación no especificada';
 
@@ -62,10 +64,12 @@ export function WorkCard({ work }: WorkCardProps) {
             <MapPin className="size-3.5 shrink-0 text-primary" />
             <span className="truncate">{locationText}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <MessageSquare className="size-3.5 shrink-0 text-muted-foreground" />
-            <span>{work.comments?.length || 0} comentarios</span>
-          </div>
+          {showComments && (
+            <div className="flex items-center gap-2">
+              <MessageSquare className="size-3.5 shrink-0 text-muted-foreground" />
+              <span>{work.comments?.length || 0} comentarios</span>
+            </div>
+          )}
         </div>
       </CardContent>
 

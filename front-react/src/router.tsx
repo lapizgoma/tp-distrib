@@ -14,13 +14,14 @@ import { TourPlannerView } from "@/features/tour/views/TourPlannerView";
 import { ReportView } from "./features/reports/views/ReportView";
 import { CompareWorksView } from "./features/works/components/CompareWorksView";
 import { ExplorationView } from './features/exploration/views/ExplorationView';
+import { HomeView } from './features/home/views/HomeView';
 
 export function AppRouter() {
     return (
         <BrowserRouter>
             <Routes>
                 <Route path="/" element={<Layout />}>
-                    <Route index element={<h1>Bienvenido al Museo Virtual Interactivo</h1>} />
+                    <Route index element={<HomeView />} />
 
                     {/* Feature: Autenticación */}
                     <Route path="login" element={<LoginView />} />
