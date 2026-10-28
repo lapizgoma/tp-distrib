@@ -48,7 +48,7 @@ class WorkServiceStub:
         self.GetRecommendedWorks = channel.unary_unary(
                 '/museum.works.WorkService/GetRecommendedWorks',
                 request_serializer=work__pb2.RecommendationCriteriaRequest.SerializeToString,
-                response_deserializer=work__pb2.WorkListResponse.FromString,
+                response_deserializer=work__pb2.RecommendationListResponse.FromString,
                 _registered_method=True)
         self.GetWorksAndArtistsByEra = channel.unary_unary(
                 '/museum.works.WorkService/GetWorksAndArtistsByEra',
@@ -105,7 +105,7 @@ def add_WorkServiceServicer_to_server(servicer, server):
             'GetRecommendedWorks': grpc.unary_unary_rpc_method_handler(
                     servicer.GetRecommendedWorks,
                     request_deserializer=work__pb2.RecommendationCriteriaRequest.FromString,
-                    response_serializer=work__pb2.WorkListResponse.SerializeToString,
+                    response_serializer=work__pb2.RecommendationListResponse.SerializeToString,
             ),
             'GetWorksAndArtistsByEra': grpc.unary_unary_rpc_method_handler(
                     servicer.GetWorksAndArtistsByEra,
@@ -194,7 +194,7 @@ class WorkService:
             target,
             '/museum.works.WorkService/GetRecommendedWorks',
             work__pb2.RecommendationCriteriaRequest.SerializeToString,
-            work__pb2.WorkListResponse.FromString,
+            work__pb2.RecommendationListResponse.FromString,
             options,
             channel_credentials,
             insecure,

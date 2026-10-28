@@ -55,6 +55,15 @@ message RecommendationCriteriaRequest {
   int32 limit = 2;
 }
 
+message RecommendedWork {
+  Work work = 1;
+  repeated string reasons = 2;
+}
+
+message RecommendationListResponse {
+  repeated RecommendedWork recommendations = 1;
+}
+
 // Req 4: Advanced Exploration
 message ExplorationByEraRequest {
   string era = 1;
@@ -75,7 +84,7 @@ service WorkService {
   rpc GetWorksForComparison (CompareWorksRequest) returns (WorkListResponse);
   
   // 3. Recommendations
-  rpc GetRecommendedWorks (RecommendationCriteriaRequest) returns (WorkListResponse);
+  rpc GetRecommendedWorks (RecommendationCriteriaRequest) returns (RecommendationListResponse);
   
   // 4. Advanced Exploration
   rpc GetWorksAndArtistsByEra (ExplorationByEraRequest) returns (ExplorationWorksResponse);
