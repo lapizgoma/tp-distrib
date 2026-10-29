@@ -1,9 +1,12 @@
 package com.tp_distribuidos.backend_rest.services;
 
 import com.tp_distribuidos.backend_rest.dtos.EventAttendeeDTO;
+import com.tp_distribuidos.backend_rest.dtos.EventFieldChangeDTO;
 import com.tp_distribuidos.backend_rest.dtos.EventFilterRequestDTO;
 import com.tp_distribuidos.backend_rest.dtos.EventRequestDTO;
 import com.tp_distribuidos.backend_rest.dtos.EventResponseDTO;
+import com.tp_distribuidos.backend_rest.dtos.EventSnapshotDTO;
+import com.tp_distribuidos.backend_rest.enums.EventNewsType;
 import com.tp_distribuidos.backend_rest.enums.UserRole;
 import com.tp_distribuidos.backend_rest.exceptions.ApiException;
 import com.tp_distribuidos.backend_rest.models.entities.Event;
@@ -11,6 +14,7 @@ import com.tp_distribuidos.backend_rest.models.entities.User;
 import com.tp_distribuidos.backend_rest.repositories.EventRegistrationRepository;
 import com.tp_distribuidos.backend_rest.repositories.EventRepository;
 import com.tp_distribuidos.backend_rest.repositories.UserRepository;
+import com.tp_distribuidos.backend_rest.security.SecurityUser;
 import com.tp_distribuidos.backend_rest.specifications.EventSpecifications;
 import lombok.RequiredArgsConstructor;
 
@@ -22,7 +26,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -31,12 +37,13 @@ public class EventService {
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
     private final EventRegistrationRepository registrationRepository;
+    private final EventOutboxService eventOutboxService;
 
     @Transactional(readOnly = true)
     public List<EventResponseDTO> getAllEvents(EventFilterRequestDTO filter) {
         validateDateRange(filter);
         return eventRepository
-                .findAll(EventSpecifications.withFilters(filter), Sort.by(Sort.Direction.ASC, "datetime"))
+                .findAll(EventSpecifications.withFilters(filter), Sort.by(Sort.Direction.ASC, Event::getDatetime))
                 .stream()
                 .map(EventResponseDTO::fromEntity)
                 .toList();
@@ -90,6 +97,19 @@ public class EventService {
         return userRepository.findByEmail(auth.getName()).orElse(null);
     }
 
+    private Long getAuthenticatedUserIdOrNull() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) {
+            return null;
+        }
+        if (auth.getPrincipal() instanceof SecurityUser securityUser) {
+            return securityUser.getId();
+        }
+        return userRepository.findByEmail(auth.getName())
+                .map(User::getId)
+                .orElse(null);
+    }
+
     @Transactional
     public EventResponseDTO createEvent(EventRequestDTO dto) {
         User leadCurator = getCuratorOrThrow(dto.getLeadCuratorId());
@@ -104,7 +124,15 @@ public class EventService {
                 dto.getEventType()
         );
 
-        return EventResponseDTO.fromEntity(eventRepository.save(event));
+        Event saved = eventRepository.save(event);
+        eventOutboxService.enqueue(
+                saved,
+                EventNewsType.EVENT_CREATED,
+                getAuthenticatedUserIdOrNull(),
+                Instant.now(),
+                null
+        );
+        return EventResponseDTO.fromEntity(saved);
     }
 
     @Transactional
@@ -113,6 +141,7 @@ public class EventService {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Evento no encontrado con ID: " + id));
 
         User leadCurator = getCuratorOrThrow(dto.getLeadCuratorId());
+        EventSnapshotDTO previous = EventSnapshotDTO.fromEntity(event);
 
         event.update(
                 dto.getTitle(),
@@ -124,7 +153,20 @@ public class EventService {
                 dto.getEventType()
         );
 
-        return EventResponseDTO.fromEntity(eventRepository.save(event));
+        EventSnapshotDTO current = EventSnapshotDTO.fromEntity(event);
+        Map<String, EventFieldChangeDTO> changes = EventChangeDetector.diff(previous, current);
+        Event saved = eventRepository.save(event);
+
+        if (!changes.isEmpty()) {
+            eventOutboxService.enqueue(
+                    saved,
+                    EventNewsType.EVENT_UPDATED,
+                    getAuthenticatedUserIdOrNull(),
+                    Instant.now(),
+                    changes
+            );
+        }
+        return EventResponseDTO.fromEntity(saved);
     }
 
     @Transactional
@@ -136,6 +178,13 @@ public class EventService {
             return;
         }
         event.markDeleted();
+        eventOutboxService.enqueue(
+                event,
+                EventNewsType.EVENT_CANCELLED,
+                getAuthenticatedUserIdOrNull(),
+                Instant.now(),
+                null
+        );
     }
 
     private User getCuratorOrThrow(Long curatorId) {

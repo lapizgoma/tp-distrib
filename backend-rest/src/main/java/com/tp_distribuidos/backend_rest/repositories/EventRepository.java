@@ -28,6 +28,6 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
      * lógica, para distinguir un evento ya eliminado (idempotente) de un ID que
      * nunca existió.
      */
-    @Query("SELECT e FROM Event e WHERE e.id = :id")
+    @Query("SELECT e FROM Event e LEFT JOIN FETCH e.leadCurator WHERE e.id = :id")
     Optional<Event> findByIdIncludingDeleted(@Param("id") Long id);
 }
