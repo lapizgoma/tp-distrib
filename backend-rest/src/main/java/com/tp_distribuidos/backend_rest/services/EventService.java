@@ -129,10 +129,13 @@ public class EventService {
 
     @Transactional
     public void deleteEvent(Long id) {
-        if (!eventRepository.existsById(id)) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "Evento no encontrado con ID: " + id);
+        Event event = eventRepository.findByIdIncludingDeleted(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Evento no encontrado con ID: " + id));
+
+        if (event.isDeleted()) {
+            return;
         }
-        eventRepository.deleteById(id);
+        event.markDeleted();
     }
 
     private User getCuratorOrThrow(Long curatorId) {

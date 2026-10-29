@@ -321,17 +321,33 @@ class EventServiceTest {
     }
 
     @Test
-    void deleteEventDeletesWhenItExists() {
-        when(eventRepository.existsById(EVENT_ID)).thenReturn(true);
+    void deleteEventMarksAsDeletedWhenItExists() {
+        Event event = buildEvent(EVENT_ID, buildUser(CURATOR_ID, UserRole.CURADOR, "Ana", "Gomez"));
+        when(eventRepository.findByIdIncludingDeleted(EVENT_ID)).thenReturn(Optional.of(event));
 
         eventService.deleteEvent(EVENT_ID);
 
-        verify(eventRepository).deleteById(EVENT_ID);
+        assertThat(event.isDeleted()).isTrue();
+        assertThat(event.getDeletedAt()).isNotNull();
+        verify(eventRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void deleteEventIsIdempotentWhenItWasAlreadyDeleted() {
+        Event event = buildDeletedEvent(EVENT_ID, buildUser(CURATOR_ID, UserRole.CURADOR, "Ana", "Gomez"));
+        LocalDateTime deletedAt = event.getDeletedAt();
+        when(eventRepository.findByIdIncludingDeleted(EVENT_ID)).thenReturn(Optional.of(event));
+
+        eventService.deleteEvent(EVENT_ID);
+
+        assertThat(event.isDeleted()).isTrue();
+        assertThat(event.getDeletedAt()).isEqualTo(deletedAt);
+        verify(eventRepository, never()).deleteById(any());
     }
 
     @Test
     void deleteEventThrowsNotFoundAndDoesNotDeleteWhenItDoesNotExist() {
-        when(eventRepository.existsById(EVENT_ID)).thenReturn(false);
+        when(eventRepository.findByIdIncludingDeleted(EVENT_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> eventService.deleteEvent(EVENT_ID))
                 .isInstanceOfSatisfying(ApiException.class, ex -> {
@@ -375,6 +391,12 @@ class EventServiceTest {
                 50,
                 EventType.VISITA_GUIADA);
         ReflectionTestUtils.setField(event, "id", id);
+        return event;
+    }
+
+    private Event buildDeletedEvent(Long id, User leadCurator) {
+        Event event = buildEvent(id, leadCurator);
+        event.markDeleted();
         return event;
     }
 

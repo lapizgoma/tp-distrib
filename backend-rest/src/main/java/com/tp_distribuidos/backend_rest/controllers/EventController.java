@@ -29,7 +29,7 @@ public class EventController {
 
     @GetMapping
     @Operation(summary = "Listar eventos",
-            description = "Retorna todos los eventos (futuros y pasados), con filtros opcionales por tipo de evento, "
+            description = "Retorna los eventos activos (no dados de baja), futuros y pasados, con filtros opcionales por tipo de evento, "
                     + "curador a cargo y rango de fechas (startDate inclusive, endDate exclusiva).")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Lista recuperada exitosamente"),
@@ -85,12 +85,15 @@ public class EventController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('CURADOR', 'ADMINISTRADOR')")
     @SecurityRequirement(name = "bearerAuth")
-    @Operation(summary = "Eliminar un evento", description = "Permite a un curador o administrador eliminar un evento.")
+    @Operation(summary = "Eliminar un evento",
+            description = "Realiza una baja lógica del evento (soft delete): deja de listarse y de ser accesible, "
+                    + "pero permanece en la base para auditoría. Es idempotente: repetir la operación sobre un evento "
+                    + "ya eliminado devuelve 204.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Evento eliminado exitosamente"),
+            @ApiResponse(responseCode = "204", description = "Evento eliminado o ya eliminado previamente"),
             @ApiResponse(responseCode = "401", description = "No autenticado"),
             @ApiResponse(responseCode = "403", description = "No autorizado para eliminar eventos"),
-            @ApiResponse(responseCode = "404", description = "Evento no encontrado")
+            @ApiResponse(responseCode = "404", description = "Evento no encontrado (ID inexistente)")
     })
     public ResponseEntity<Void> deleteEvent(@PathVariable Long id) {
         eventService.deleteEvent(id);
