@@ -37,7 +37,7 @@ public class EventRegistrationService {
     @Transactional
     public EventRegistrationResponseDTO registerMember(EventRegistrationRequestDTO request) {
         User user = getAuthenticatedUser();
-        Event event = eventRepository.findById(request.getEventId())
+        Event event = eventRepository.findByIdAndDeletedFalse(request.getEventId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Evento no encontrado con ID: " + request.getEventId()));
 
         if (registrationRepository.existsByEventIdAndUserId(event.getId(), user.getId())) {

@@ -1,9 +1,11 @@
 package com.tp_distribuidos.backend_rest.services;
 
 import com.tp_distribuidos.backend_rest.dtos.EventAttendeeDTO;
+import com.tp_distribuidos.backend_rest.dtos.EventFieldChangeDTO;
 import com.tp_distribuidos.backend_rest.dtos.EventFilterRequestDTO;
 import com.tp_distribuidos.backend_rest.dtos.EventRequestDTO;
 import com.tp_distribuidos.backend_rest.dtos.EventResponseDTO;
+import com.tp_distribuidos.backend_rest.enums.EventNewsType;
 import com.tp_distribuidos.backend_rest.enums.EventType;
 import com.tp_distribuidos.backend_rest.enums.UserRole;
 import com.tp_distribuidos.backend_rest.exceptions.ApiException;
@@ -13,6 +15,7 @@ import com.tp_distribuidos.backend_rest.models.entities.User;
 import com.tp_distribuidos.backend_rest.repositories.EventRegistrationRepository;
 import com.tp_distribuidos.backend_rest.repositories.EventRepository;
 import com.tp_distribuidos.backend_rest.repositories.UserRepository;
+import com.tp_distribuidos.backend_rest.security.SecurityUser;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,14 +32,18 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -58,6 +65,9 @@ class EventServiceTest {
 
     @Mock
     private EventRegistrationRepository registrationRepository;
+
+    @Mock
+    private EventOutboxService eventOutboxService;
 
     @InjectMocks
     private EventService eventService;
@@ -239,6 +249,38 @@ class EventServiceTest {
         assertThat(result.title()).isEqualTo("Noche de Gala");
         assertThat(result.leadCuratorId()).isEqualTo(CURATOR_ID);
         verify(eventRepository).save(any(Event.class));
+        verify(eventOutboxService).enqueue(
+                any(Event.class),
+                eq(EventNewsType.EVENT_CREATED),
+                isNull(),
+                any(Instant.class),
+                isNull()
+        );
+    }
+
+    @Test
+    void createEventRecordsAuthenticatedUserAsResponsible() {
+        User curator = buildUser(CURATOR_ID, UserRole.CURADOR, "Ana", "Gomez");
+        User actor = buildUser(USER_ID, UserRole.ADMINISTRADOR, "Root", "Admin");
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        SecurityUser.of(actor), null, List.of(new SimpleGrantedAuthority("ROLE_ADMINISTRADOR"))));
+        when(userRepository.findById(CURATOR_ID)).thenReturn(Optional.of(curator));
+        when(eventRepository.save(any(Event.class))).thenAnswer(invocation -> {
+            Event saved = invocation.getArgument(0);
+            ReflectionTestUtils.setField(saved, "id", EVENT_ID);
+            return saved;
+        });
+
+        eventService.createEvent(buildRequest(CURATOR_ID));
+
+        verify(eventOutboxService).enqueue(
+                any(Event.class),
+                eq(EventNewsType.EVENT_CREATED),
+                eq(USER_ID),
+                any(Instant.class),
+                isNull()
+        );
     }
 
     @Test
@@ -267,17 +309,50 @@ class EventServiceTest {
     }
 
     @Test
-    void updateEventUpdatesFieldsAndSavesWhenValid() {
+    void updateEventUpdatesFieldsAndEnqueuesOnlyChangedValues() {
         Event event = buildEvent(EVENT_ID, buildUser(CURATOR_ID, UserRole.CURADOR, "Ana", "Gomez"));
         when(eventRepository.findByIdWithCurator(EVENT_ID)).thenReturn(Optional.of(event));
         when(userRepository.findById(CURATOR_ID)).thenReturn(Optional.of(buildUser(CURATOR_ID, UserRole.CURADOR, "Ana", "Gomez")));
         when(eventRepository.save(any(Event.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        EventResponseDTO result = eventService.updateEvent(EVENT_ID, buildRequest(CURATOR_ID));
+        EventRequestDTO request = buildRequest(CURATOR_ID);
+        request.setTitle("Noche de Gala Actualizada");
+        request.setDatetime(event.getDatetime());
+
+        EventResponseDTO result = eventService.updateEvent(EVENT_ID, request);
 
         assertThat(result.id()).isEqualTo(EVENT_ID);
-        assertThat(event.getTitle()).isEqualTo("Noche de Gala");
+        assertThat(event.getTitle()).isEqualTo("Noche de Gala Actualizada");
         verify(eventRepository).save(event);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Map<String, EventFieldChangeDTO>> changesCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(eventOutboxService).enqueue(
+                eq(event),
+                eq(EventNewsType.EVENT_UPDATED),
+                isNull(),
+                any(Instant.class),
+                changesCaptor.capture()
+        );
+        assertThat(changesCaptor.getValue()).containsOnlyKeys("eventTitle");
+        assertThat(changesCaptor.getValue().get("eventTitle"))
+                .isEqualTo(new EventFieldChangeDTO("Noche de Gala", "Noche de Gala Actualizada"));
+    }
+
+    @Test
+    void updateEventDoesNotEnqueueWhenNothingRelevantChanged() {
+        Event event = buildEvent(EVENT_ID, buildUser(CURATOR_ID, UserRole.CURADOR, "Ana", "Gomez"));
+        when(eventRepository.findByIdWithCurator(EVENT_ID)).thenReturn(Optional.of(event));
+        when(userRepository.findById(CURATOR_ID)).thenReturn(Optional.of(buildUser(CURATOR_ID, UserRole.CURADOR, "Ana", "Gomez")));
+        when(eventRepository.save(any(Event.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        EventRequestDTO request = buildRequest(CURATOR_ID);
+        request.setDatetime(event.getDatetime());
+
+        eventService.updateEvent(EVENT_ID, request);
+
+        verify(eventRepository).save(event);
+        verify(eventOutboxService, never()).enqueue(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -321,17 +396,41 @@ class EventServiceTest {
     }
 
     @Test
-    void deleteEventDeletesWhenItExists() {
-        when(eventRepository.existsById(EVENT_ID)).thenReturn(true);
+    void deleteEventMarksAsDeletedWhenItExists() {
+        Event event = buildEvent(EVENT_ID, buildUser(CURATOR_ID, UserRole.CURADOR, "Ana", "Gomez"));
+        when(eventRepository.findByIdIncludingDeleted(EVENT_ID)).thenReturn(Optional.of(event));
 
         eventService.deleteEvent(EVENT_ID);
 
-        verify(eventRepository).deleteById(EVENT_ID);
+        assertThat(event.isDeleted()).isTrue();
+        assertThat(event.getDeletedAt()).isNotNull();
+        verify(eventRepository, never()).deleteById(any());
+        verify(eventOutboxService).enqueue(
+                eq(event),
+                eq(EventNewsType.EVENT_CANCELLED),
+                isNull(),
+                any(Instant.class),
+                isNull()
+        );
+    }
+
+    @Test
+    void deleteEventIsIdempotentWhenItWasAlreadyDeleted() {
+        Event event = buildDeletedEvent(EVENT_ID, buildUser(CURATOR_ID, UserRole.CURADOR, "Ana", "Gomez"));
+        LocalDateTime deletedAt = event.getDeletedAt();
+        when(eventRepository.findByIdIncludingDeleted(EVENT_ID)).thenReturn(Optional.of(event));
+
+        eventService.deleteEvent(EVENT_ID);
+
+        assertThat(event.isDeleted()).isTrue();
+        assertThat(event.getDeletedAt()).isEqualTo(deletedAt);
+        verify(eventRepository, never()).deleteById(any());
+        verify(eventOutboxService, never()).enqueue(any(), any(), any(), any(), any());
     }
 
     @Test
     void deleteEventThrowsNotFoundAndDoesNotDeleteWhenItDoesNotExist() {
-        when(eventRepository.existsById(EVENT_ID)).thenReturn(false);
+        when(eventRepository.findByIdIncludingDeleted(EVENT_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> eventService.deleteEvent(EVENT_ID))
                 .isInstanceOfSatisfying(ApiException.class, ex -> {
@@ -339,6 +438,7 @@ class EventServiceTest {
                     assertThat(ex.getMessage()).isEqualTo("Evento no encontrado con ID: " + EVENT_ID);
                 });
         verify(eventRepository, never()).deleteById(any());
+        verify(eventOutboxService, never()).enqueue(any(), any(), any(), any(), any());
     }
 
     private void authenticate() {
@@ -375,6 +475,12 @@ class EventServiceTest {
                 50,
                 EventType.VISITA_GUIADA);
         ReflectionTestUtils.setField(event, "id", id);
+        return event;
+    }
+
+    private Event buildDeletedEvent(Long id, User leadCurator) {
+        Event event = buildEvent(id, leadCurator);
+        event.markDeleted();
         return event;
     }
 

@@ -68,10 +68,13 @@ CREATE TABLE IF NOT EXISTS events (
     lead_curator_id   BIGINT       NOT NULL,
     maximum_capacity  INT          NOT NULL,
     event_type        VARCHAR(20)  NOT NULL,
+    is_deleted        TINYINT(1)   NOT NULL DEFAULT 0,
+    deleted_at        DATETIME     NULL,
     PRIMARY KEY (id),
     KEY idx_events_datetime (datetime),
     KEY idx_events_lead_curator_id (lead_curator_id),
     KEY idx_events_type_datetime (event_type, datetime),
+    KEY idx_events_is_deleted_datetime (is_deleted, datetime),
     CONSTRAINT fk_events_lead_curator FOREIGN KEY (lead_curator_id) REFERENCES users (id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
 

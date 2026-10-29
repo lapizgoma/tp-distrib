@@ -51,6 +51,9 @@ class CommentServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private UserWorkInteractionService userWorkInteractionService;
+
     @InjectMocks
     private CommentService commentService;
 

@@ -26,7 +26,8 @@ import java.util.List;
 @Table(name = "events", indexes = {
         @Index(name = "idx_events_datetime", columnList = "datetime"),
         @Index(name = "idx_events_lead_curator_id", columnList = "lead_curator_id"),
-        @Index(name = "idx_events_type_datetime", columnList = "event_type, datetime")
+        @Index(name = "idx_events_type_datetime", columnList = "event_type, datetime"),
+        @Index(name = "idx_events_is_deleted_datetime", columnList = "is_deleted, datetime")
 })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -57,6 +58,12 @@ public class Event {
     @Enumerated(EnumType.STRING)
     @Column(name = "event_type", nullable = false, length = 20)
     private EventType eventType;
+
+    @Column(name = "is_deleted", nullable = false)
+    private boolean deleted = false;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 
     @OneToMany(mappedBy = "event", fetch = FetchType.LAZY)
     private List<EventRegistration> registrations = new ArrayList<>();
@@ -91,4 +98,12 @@ public class Event {
         this.eventType = eventType;
     }
 
+    /**
+     * Marca el evento como eliminado (baja lógica). El evento permanece en la base
+     * para auditoría, pero deja de listarse y de ser accesible por ID.
+     */
+    public void markDeleted() {
+        this.deleted = true;
+        this.deletedAt = LocalDateTime.now();
+    }
 }

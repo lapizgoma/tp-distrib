@@ -22,6 +22,8 @@ El frontend (React + Vite) corre en el host y consume todo a través de `/api`, 
 | `grpc-works` | Python | 50051 | Servicio gRPC de obras |
 | `grpc-events` | Python | 50052 | Servicio gRPC de eventos |
 | `grpc-users` | Python | 50053 | Servicio gRPC de usuarios |
+| `kafka` | Apache Kafka 4.3.1 (KRaft) | 29092 | Broker de mensajería asíncrona |
+| `kafka-ui` | Kafbat UI | 8085 | Consola web opcional para topics y mensajes |
 | `mysql` | MySQL 8 | 3306 | Base de datos (`museo_virtual`) |
 
 ## Requisitos previos
@@ -89,6 +91,96 @@ npm run dev
 * REST directo: http://localhost:8081
 * GraphQL directo: http://localhost:8082
 * API Gateway gRPC: http://localhost:8090
+* Kafka UI: http://localhost:8085
+
+## Mensajería asíncrona
+
+El backend REST publica novedades de eventos en Kafka usando el patrón
+**Transactional Outbox**:
+
+1. La operación sobre el evento y una fila en `event_outbox` se guardan en la
+   misma transacción MySQL.
+2. Un worker programado lee las filas `PENDING` y las publica en
+   `museum.events`.
+3. Si Kafka no está disponible, la novedad queda persistida y se reintenta con
+   backoff exponencial. La API REST sigue respondiendo.
+4. El mensaje usa el `eventId` como clave de Kafka para conservar el orden por
+   evento. La entrega es at-least-once; los consumidores deben deduplicar por
+   `messageId`.
+
+Topics creados automáticamente por `kafka-init`:
+
+* `museum.events`: alta, modificación y cancelación de eventos.
+* `museum.events.DLQ`: topic de descarte para los consumidores.
+
+La tabla `event_outbox` se crea con `init-db/05-schema-3.sql`. Si ya tenías un
+volumen de MySQL con la tabla creada antes de incorporar el diff de auditoría,
+agregá la columna manualmente:
+
+```sql
+ALTER TABLE event_outbox
+    ADD COLUMN changes_json TEXT NULL AFTER responsible_user_id;
+```
+
+También podés recrear el volumen con `docker compose down -v` (borra los datos).
+
+Tipos de novedad: `EVENT_CREATED`, `EVENT_UPDATED`, `EVENT_CANCELLED`.
+
+Ejemplo de alta o cancelación:
+
+```json
+{
+  "schemaVersion": 1,
+  "messageId": "7f0c9d2e-4a1b-4c3d-9e8f-123456789abc",
+  "newsType": "EVENT_CREATED",
+  "eventId": 12,
+  "eventTitle": "Noche de Gala en el Museo",
+  "eventDateTime": "2026-11-15T20:00:00",
+  "eventType": "VISITA_GUIADA",
+  "leadCuratorId": 2,
+  "occurredAt": "2026-10-29T14:03:11Z",
+  "responsibleUserId": 5,
+  "source": "backend-rest"
+}
+```
+
+Para `EVENT_UPDATED`, el mensaje conserva el snapshot nuevo en los campos
+principales y agrega `changes` con los valores anterior y posterior de cada
+campo modificado. Solo se publica si hubo al menos un cambio relevante:
+
+```json
+{
+  "schemaVersion": 1,
+  "messageId": "ecc61a21-85de-41d3-9f14-aec546345cdc",
+  "newsType": "EVENT_UPDATED",
+  "eventId": 12,
+  "eventTitle": "Charla: vanguardias del siglo XIX",
+  "eventDateTime": "2026-10-30T01:49:00",
+  "eventType": "CHARLA",
+  "leadCuratorId": 2,
+  "occurredAt": "2026-10-29T21:49:50.689Z",
+  "responsibleUserId": 1,
+  "source": "backend-rest",
+  "changes": {
+    "eventTitle": {
+      "previous": "Charla: vanguardias del siglo XVIII",
+      "current": "Charla: vanguardias del siglo XIX"
+    },
+    "eventDateTime": {
+      "previous": "2026-10-30T01:49:00",
+      "current": "2026-11-02T18:00:00"
+    },
+    "leadCuratorId": {
+      "previous": 3,
+      "current": 2
+    }
+  }
+}
+```
+
+Campos que pueden aparecer en `changes`: `eventTitle`, `description`,
+`eventDateTime`, `duration`, `leadCuratorId`, `maximumCapacity`, `eventType`.
+Los valores mantienen su tipo JSON: texto, número, enum o `null`.
 
 ## Comandos útiles
 
@@ -106,6 +198,13 @@ docker compose --profile full down -v
 docker compose --profile rest up --build
 docker compose --profile graphql up --build
 docker compose --profile grpc up --build
+
+# Kafka: topics y mensajes
+docker compose --profile rest logs -f kafka backend-rest
+docker exec -it museo-kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
+docker exec -it museo-kafka /opt/kafka/bin/kafka-console-consumer.sh \
+  --bootstrap-server localhost:9092 --topic museum.events --from-beginning \
+  --property print.key=true
 
 # Frontend: lint y build de producción
 cd front-react

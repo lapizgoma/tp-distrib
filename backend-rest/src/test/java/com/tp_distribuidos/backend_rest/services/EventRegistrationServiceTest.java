@@ -72,7 +72,7 @@ class EventRegistrationServiceTest {
         User user = buildUser(USER_ID);
         Event event = buildEvent(EVENT_ID, null);
         when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(user));
-        when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(event));
+        when(eventRepository.findByIdAndDeletedFalse(EVENT_ID)).thenReturn(Optional.of(event));
         when(registrationRepository.existsByEventIdAndUserId(EVENT_ID, USER_ID)).thenReturn(false);
         when(registrationRepository.save(any(EventRegistration.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -91,7 +91,7 @@ class EventRegistrationServiceTest {
         User user = buildUser(USER_ID);
         Event event = buildEvent(EVENT_ID, 10);
         when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(user));
-        when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(event));
+        when(eventRepository.findByIdAndDeletedFalse(EVENT_ID)).thenReturn(Optional.of(event));
         when(registrationRepository.existsByEventIdAndUserId(EVENT_ID, USER_ID)).thenReturn(false);
         when(registrationRepository.countByEventId(EVENT_ID)).thenReturn(3L);
         when(registrationRepository.save(any(EventRegistration.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -108,7 +108,7 @@ class EventRegistrationServiceTest {
         User user = buildUser(USER_ID);
         Event event = buildEvent(EVENT_ID, null);
         when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(user));
-        when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(event));
+        when(eventRepository.findByIdAndDeletedFalse(EVENT_ID)).thenReturn(Optional.of(event));
         when(registrationRepository.existsByEventIdAndUserId(EVENT_ID, USER_ID)).thenReturn(false);
         when(registrationRepository.save(any(EventRegistration.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -126,7 +126,7 @@ class EventRegistrationServiceTest {
         User user = buildUser(USER_ID);
         Event event = buildEvent(EVENT_ID, 10);
         when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(user));
-        when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(event));
+        when(eventRepository.findByIdAndDeletedFalse(EVENT_ID)).thenReturn(Optional.of(event));
         when(registrationRepository.existsByEventIdAndUserId(EVENT_ID, USER_ID)).thenReturn(false);
         when(registrationRepository.countByEventId(EVENT_ID)).thenReturn(10L);
 
@@ -143,7 +143,7 @@ class EventRegistrationServiceTest {
         User user = buildUser(USER_ID);
         Event event = buildEvent(EVENT_ID, 10);
         when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(user));
-        when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.of(event));
+        when(eventRepository.findByIdAndDeletedFalse(EVENT_ID)).thenReturn(Optional.of(event));
         when(registrationRepository.existsByEventIdAndUserId(EVENT_ID, USER_ID)).thenReturn(true);
 
         assertThatThrownBy(() -> registrationService.registerMember(buildRequest()))
@@ -159,7 +159,7 @@ class EventRegistrationServiceTest {
     void registerThrowsNotFoundAndDoesNotCheckRegistrationWhenEventDoesNotExist() {
         User user = buildUser(USER_ID);
         when(userRepository.findByEmail(EMAIL)).thenReturn(Optional.of(user));
-        when(eventRepository.findById(EVENT_ID)).thenReturn(Optional.empty());
+        when(eventRepository.findByIdAndDeletedFalse(EVENT_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> registrationService.registerMember(buildRequest()))
                 .isInstanceOfSatisfying(ApiException.class, ex -> {
