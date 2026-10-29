@@ -35,8 +35,9 @@ public final class EventSpecifications {
      *
      * <p>Cada criterio se agrega únicamente si su valor es distinto de {@code null}, por lo que
      * cualquier combinación de filtros es válida. Si el filtro es {@code null} o todos sus
-     * campos están vacíos, se retorna una conjunción vacía ({@code cb.and()} sin predicados),
-     * que equivale a "sin restricciones": se listan todos los eventos, futuros y pasados.</p>
+     * campos están vacíos, se retorna una conjunción con el único predicado fijo de la
+     * specification: {@code deleted = false}. Es decir, nunca se listan eventos dados de baja,
+     * pero sí se listan todos los activos, futuros y pasados.</p>
      *
      * <p>Semántica de los filtros:</p>
      * <ul>
@@ -56,6 +57,7 @@ public final class EventSpecifications {
     public static Specification<Event> withFilters(EventFilterRequestDTO filter) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
+            addNotDeletedPredicate(predicates, root, cb);
 
             if (filter != null) {
                 addCommonPredicates(predicates, root, cb, filter.getType(), filter.getStartDate(), filter.getEndDate());
@@ -87,6 +89,7 @@ public final class EventSpecifications {
     public static Specification<Event> withReportFilters(AttendanceReportFilterRequestDTO filter) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
+            addNotDeletedPredicate(predicates, root, cb);
 
             if (filter != null) {
                 addCommonPredicates(predicates, root, cb, filter.getType(), filter.getStartDate(), filter.getEndDate());
@@ -94,6 +97,15 @@ public final class EventSpecifications {
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
+    }
+
+    /**
+     * Agrega el predicado fijo que excluye los eventos dados de baja lógica. Se aplica
+     * siempre, independientemente de los filtros recibidos, para que ninguna superficie
+     * de consulta exponga eventos eliminados.
+     */
+    private static void addNotDeletedPredicate(List<Predicate> predicates, Root<Event> root, CriteriaBuilder cb) {
+        predicates.add(cb.isFalse(root.<Boolean>get("deleted")));
     }
 
     /**
