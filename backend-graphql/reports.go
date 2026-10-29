@@ -241,7 +241,7 @@ func fetchReportDataFromDatabase(ctx context.Context, args map[string]interface{
 		    COUNT(er.user_id) AS registrants
 		FROM events e
 		LEFT JOIN events_registrations er ON er.event_id = e.id
-		WHERE 1 = 1` /* NOTA: es necesaria esta obviedad porque lo demás se añade con un "AND" */
+		WHERE e.is_deleted = 0` /* NOTA: excluye los eventos dados de baja; el resto de los filtros se añade con un "AND" */
 
 	var queryArgs []interface{}
 

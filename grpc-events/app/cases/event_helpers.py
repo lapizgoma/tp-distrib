@@ -17,6 +17,7 @@ EVENTS_QUERY = """
         COALESCE(event_type, '') AS event_type,
         COALESCE(associated_era, '') AS associated_era
     FROM events
+    WHERE is_deleted = 0
     ORDER BY datetime, id
 """
 
