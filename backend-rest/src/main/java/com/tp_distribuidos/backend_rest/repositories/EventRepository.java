@@ -18,6 +18,16 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
     @EntityGraph(attributePaths = "leadCurator")
     List<Event> findAll(Specification<Event> spec, Sort sort);
 
-    @Query("SELECT e FROM Event e JOIN FETCH e.leadCurator WHERE e.id = :id")
+    @Query("SELECT e FROM Event e JOIN FETCH e.leadCurator WHERE e.id = :id AND e.deleted = false")
     Optional<Event> findByIdWithCurator(@Param("id") Long id);
+
+    Optional<Event> findByIdAndDeletedFalse(Long id);
+
+    /**
+     * Busca un evento incluyendo los dados de baja. Se usa únicamente en la baja
+     * lógica, para distinguir un evento ya eliminado (idempotente) de un ID que
+     * nunca existió.
+     */
+    @Query("SELECT e FROM Event e WHERE e.id = :id")
+    Optional<Event> findByIdIncludingDeleted(@Param("id") Long id);
 }
