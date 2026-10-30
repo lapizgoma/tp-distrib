@@ -111,7 +111,7 @@ El backend REST publica novedades de eventos en Kafka usando el patrón
 Topics creados automáticamente por `kafka-init`:
 
 * `museum.events`: alta, modificación y cancelación de eventos.
-* `museum.events.DLQ`: topic de descarte para los consumidores.
+* `audit-dlq`: topic de descarte del consumidor de auditoría.
 
 La tabla `event_outbox` se crea con `init-db/05-schema-3.sql`. Si ya tenías un
 volumen de MySQL con la tabla creada antes de incorporar el diff de auditoría,

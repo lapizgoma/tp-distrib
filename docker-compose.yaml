@@ -66,7 +66,7 @@ services:
     command:
       - |
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic museum.events --partitions 3 --replication-factor 1
-        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic museum.events.DLQ --partitions 1 --replication-factor 1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic audit-dlq --partitions 1 --replication-factor 1
     restart: "no"
 
   # UI opcional para inspeccionar topics y mensajes durante la demo
@@ -107,6 +107,37 @@ services:
 
       # Kafka Configuration
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      mysql:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+
+  # Consumidor de auditoría (Go) - Perfil: rest, full
+  audit:
+    profiles: ["rest", "full"]
+    build:
+      context: ./audit
+      dockerfile: Dockerfile
+    container_name: museo-audit
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    environment:
+      TP_DISTRIB_DB_ADDR: ${DB_HOST:-mysql}:${DB_PORT:-3306}
+      TP_DISTRIB_DB_USERNAME: ${DB_USER:-root}
+      TP_DISTRIB_DB_PASSWORD: ${DB_PASSWORD:-root}
+      TP_DISTRIB_DB_NAME: ${DB_NAME:-museo_virtual}
+
+      # Kafka Configuration
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPIC_EVENTS: museum.events
+      KAFKA_TOPIC_DLQ: audit-dlq
+      KAFKA_GROUP_ID: audit-service
+
+      PORT: "8083"
     depends_on:
       mysql:
         condition: service_healthy
