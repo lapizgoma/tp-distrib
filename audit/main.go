@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
@@ -63,6 +62,12 @@ func main() {
 	groupID := getenv("KAFKA_GROUP_ID", "audit-service")
 	port := getenv("PORT", "8083")
 
+	secret := os.Getenv("JWT_SECRET")
+	if len(secret) < 32 {
+		log.Fatal("JWT_SECRET debe tener al menos 32 caracteres y ser igual al de Spring")
+	}
+	issuer := getenv("JWT_ISSUER", "museo-virtual")
+
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:        []string{broker},
 		GroupID:        groupID,
@@ -114,7 +119,7 @@ func main() {
 
 	go func() {
 		defer wg.Done()
-		serveHTTP(ctx, db, port)
+		serveHTTP(ctx, db, port, []byte(secret), issuer)
 	}()
 
 	log.Printf("INFO: audit service escuchando %s, grupo %s", topic, groupID)
@@ -268,35 +273,6 @@ func commitMessage(reader *kafka.Reader, msg kafka.Message) {
 
 	if err := reader.CommitMessages(ctx, msg); err != nil {
 		log.Printf("ERROR: no se pudo confirmar offset=%d: %v", msg.Offset, err)
-	}
-}
-
-// TODO: manejar requests y auth
-func serveHTTP(ctx context.Context, db *sql.DB, port string) {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		pingCtx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
-		defer cancel()
-		if err := db.PingContext(pingCtx); err != nil {
-			http.Error(w, "db no disponible: "+err.Error(), http.StatusServiceUnavailable)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"status":"ok","service":"audit"}`))
-	})
-
-	server := &http.Server{Addr: ":" + port, Handler: mux}
-
-	go func() {
-		<-ctx.Done()
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		_ = server.Shutdown(shutdownCtx)
-	}()
-
-	log.Printf("INFO: health en http://localhost:%s/health", port)
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Printf("ERROR: servidor HTTP: %v", err)
 	}
 }
 

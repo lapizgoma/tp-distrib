@@ -137,6 +137,10 @@ services:
       KAFKA_TOPIC_DLQ: audit-dlq
       KAFKA_GROUP_ID: audit-service
 
+      # Mismo JWT que backend-rest y backend-graphql
+      JWT_SECRET: ${JWT_SECRET:-dev-only-secret-key-change-me-please-0123456789}
+      JWT_ISSUER: ${JWT_ISSUER:-museo-virtual}
+
       PORT: "8083"
     depends_on:
       mysql:
