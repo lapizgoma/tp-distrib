@@ -45,6 +45,11 @@ class EventServiceStub:
                 request_serializer=event__pb2.EventsByEraRequest.SerializeToString,
                 response_deserializer=event__pb2.EventListResponse.FromString,
                 _registered_method=True)
+        self.GetEventsForTour = channel.unary_unary(
+                '/museum.events.EventService/GetEventsForTour',
+                request_serializer=event__pb2.EventsForTourRequest.SerializeToString,
+                response_deserializer=event__pb2.EventListResponse.FromString,
+                _registered_method=True)
 
 
 class EventServiceServicer:
@@ -63,6 +68,12 @@ class EventServiceServicer:
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetEventsForTour(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_EventServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -74,6 +85,11 @@ def add_EventServiceServicer_to_server(servicer, server):
             'GetEventsByEra': grpc.unary_unary_rpc_method_handler(
                     servicer.GetEventsByEra,
                     request_deserializer=event__pb2.EventsByEraRequest.FromString,
+                    response_serializer=event__pb2.EventListResponse.SerializeToString,
+            ),
+            'GetEventsForTour': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetEventsForTour,
+                    request_deserializer=event__pb2.EventsForTourRequest.FromString,
                     response_serializer=event__pb2.EventListResponse.SerializeToString,
             ),
     }
@@ -131,6 +147,33 @@ class EventService:
             target,
             '/museum.events.EventService/GetEventsByEra',
             event__pb2.EventsByEraRequest.SerializeToString,
+            event__pb2.EventListResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetEventsForTour(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/museum.events.EventService/GetEventsForTour',
+            event__pb2.EventsForTourRequest.SerializeToString,
             event__pb2.EventListResponse.FromString,
             options,
             channel_credentials,

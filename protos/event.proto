@@ -27,6 +27,17 @@ message EventsByEraRequest {
   string era = 1;
 }
 
+// Req 1: Personalized Tour - eventos dentro de la franja de cada sala
+message RoomScheduleSlot {
+  string room = 1;
+  string start_datetime = 2;
+  string end_datetime = 3;
+}
+
+message EventsForTourRequest {
+  repeated RoomScheduleSlot room_schedule = 1;
+}
+
 message EventListResponse {
   repeated Event events = 1;
 }
@@ -35,4 +46,5 @@ message EventListResponse {
 service EventService {
   rpc GetEventsByLocations (EventsByLocationsRequest) returns (EventListResponse);
   rpc GetEventsByEra (EventsByEraRequest) returns (EventListResponse);
+  rpc GetEventsForTour (EventsForTourRequest) returns (EventListResponse);
 }
