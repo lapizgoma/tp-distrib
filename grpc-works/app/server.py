@@ -7,9 +7,10 @@ from concurrent import futures
 import grpc
 import mysql.connector
 
-from app.cases.search_works_for_tour import search_works_for_tour
 from app.cases.get_recommended_works import get_recommended_works
 from app.cases.get_works_and_artists_by_era import get_works_and_artists_by_era
+from app.cases.search_works_for_tour import search_works_for_tour
+from app.cases.tour_schedule import InvalidStartDatetime
 from app.config import load_env
 from app.generated import work_pb2_grpc
 
@@ -28,6 +29,8 @@ class WorkServiceServicer(work_pb2_grpc.WorkServiceServicer):
         """Devuelve las obras que forman el tour según los criterios recibidos."""
         try:
             return search_works_for_tour(request)
+        except InvalidStartDatetime as error:
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(error))
         except mysql.connector.Error:
             logging.exception("SearchWorksForTour database error")
             context.abort(grpc.StatusCode.INTERNAL, "database error")

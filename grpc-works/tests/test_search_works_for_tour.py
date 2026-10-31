@@ -225,6 +225,45 @@ class SearchWorksForTourMappingTest(unittest.TestCase):
         self.assertEqual(list(response.rooms), [])
         self.assertTrue(any("temas" in note for note in response.notes))
 
+    def test_case_returns_room_schedule_when_start_is_provided(self):
+        candidates = [
+            make_candidate(id=1, location="SALA_2_IMPRESIONISMO", creation_year=1872),
+            make_candidate(id=2, location="SALA_4_ARTE_MODERNO", creation_year=1889),
+        ]
+        request = work_pb2.TourCriteriaRequest(start_datetime="2026-11-01T10:00")
+
+        with patch(
+            "app.cases.search_works_for_tour.fetch_work_candidates",
+            return_value=candidates,
+        ):
+            response = search_works_for_tour(request)
+
+        self.assertEqual(response.start_datetime, "2026-11-01T10:00:00")
+        self.assertEqual(response.end_datetime, "2026-11-01T10:25:00")
+        self.assertEqual(
+            [
+                (slot.room, slot.start_datetime, slot.end_datetime)
+                for slot in response.room_schedule
+            ],
+            [
+                ("sala_2_impresionismo", "2026-11-01T10:00:00", "2026-11-01T10:10:00"),
+                ("sala_4_arte_moderno", "2026-11-01T10:15:00", "2026-11-01T10:25:00"),
+            ],
+        )
+
+    def test_case_without_start_keeps_legacy_response(self):
+        request = work_pb2.TourCriteriaRequest()
+
+        with patch(
+            "app.cases.search_works_for_tour.fetch_work_candidates",
+            return_value=[make_candidate()],
+        ):
+            response = search_works_for_tour(request)
+
+        self.assertEqual(response.start_datetime, "")
+        self.assertEqual(response.end_datetime, "")
+        self.assertEqual(list(response.room_schedule), [])
+
 
 if __name__ == "__main__":
     unittest.main()
