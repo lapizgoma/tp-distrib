@@ -21,6 +21,7 @@ func main() {
 	restTarget, _ := url.Parse(getenv("REST_TARGET", "http://localhost:8081"))
 	gqlTarget, _ := url.Parse(getenv("GQL_TARGET", "http://localhost:8082"))
 	gatewayTarget, _ := url.Parse(getenv("GATEWAY_TARGET", "http://localhost:8090"))
+	notificationsTarget, _ := url.Parse(getenv("NOTIFICATIONS_TARGET", "http://localhost:8084"))
 
 	port := getenv("PORT", "8080")
 
@@ -29,6 +30,7 @@ func main() {
 	restProxy := httputil.NewSingleHostReverseProxy(restTarget)
 	gqlProxy := httputil.NewSingleHostReverseProxy(gqlTarget)
 	gatewayProxy := httputil.NewSingleHostReverseProxy(gatewayTarget)
+	notificationsProxy := httputil.NewSingleHostReverseProxy(notificationsTarget)
 
 	// dispatcher
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -41,6 +43,9 @@ func main() {
 		} else if strings.HasPrefix(r.URL.Path, "/api/grpc") {
 			log.Println("INFO: Routing to API Gateway ")
 			gatewayProxy.ServeHTTP(w, r)
+		} else if strings.HasPrefix(r.URL.Path, "/api/notifications") {
+			log.Println("INFO: Routing to Notifications service")
+			notificationsProxy.ServeHTTP(w, r)
 		} else {
 			http.Error(w, "Not Found", http.StatusNotFound)
 		}

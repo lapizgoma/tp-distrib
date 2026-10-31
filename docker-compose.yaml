@@ -240,6 +240,7 @@ services:
       REST_TARGET: http://backend-rest:8081
       GQL_TARGET: http://backend-graphql:8082
       GATEWAY_TARGET: http://api-gateway:8090
+      NOTIFICATIONS_TARGET: http://notifications:8084
       PORT: "8080"
     depends_on:
       - backend-rest
