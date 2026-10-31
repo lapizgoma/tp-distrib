@@ -31,10 +31,17 @@ message TourCriteriaRequest {
   repeated string preferred_topics = 6;
   repeated string preferred_eras = 7;
   repeated string preferred_techniques = 8;
+  string start_datetime = 9;
 }
 
 message WorkListResponse {
   repeated Work works = 1;
+}
+
+message RoomSchedule {
+  string room = 1;
+  string start_datetime = 2;
+  string end_datetime = 3;
 }
 
 message TourPlanResponse {
@@ -42,6 +49,9 @@ message TourPlanResponse {
   int32 total_duration_minutes = 2;
   repeated string rooms = 3;
   repeated string notes = 4;
+  string start_datetime = 5;
+  string end_datetime = 6;
+  repeated RoomSchedule room_schedule = 7;
 }
 
 // Req 2: Work Comparison
