@@ -190,7 +190,6 @@ func handleAuditEvents(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		payloadColumn = "payload_json"
 	}
 
-	
 	sqlText := `SELECT
 		id, message_id, schema_version, news_type, event_id, event_title,
 		event_datetime, event_type, lead_curator_id, responsible_user_id,
