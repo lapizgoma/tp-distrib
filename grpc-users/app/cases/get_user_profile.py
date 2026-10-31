@@ -1,6 +1,7 @@
 """Consultas y mapeo del perfil de usuario a protobuf."""
 
 import json
+from datetime import datetime
 
 from app.db import fetch_all, fetch_one
 from app.generated import user_pb2
@@ -25,11 +26,12 @@ PREFERENCES_QUERY = """
     WHERE user_id = %s
 """
 
+# Modificado: ahora trae el detalle completo de las interacciones
 INTERACTIONS_QUERY = """
-    SELECT DISTINCT work_id
+    SELECT work_id, interaction_type, created_at
     FROM user_work_interactions
     WHERE user_id = %s
-    ORDER BY work_id
+    ORDER BY created_at DESC
 """
 
 
@@ -78,10 +80,30 @@ def preferences_to_proto(row: dict | None) -> user_pb2.UserPreferences:
     )
 
 
-def interacted_work_ids(user_id: int) -> list[int]:
-    """Devuelve los ids de obras con interacción del usuario."""
+def interactions_to_proto(user_id: int) -> tuple[list[int], list[user_pb2.UserInteraction]]:
+    """Devuelve los IDs únicos interaccionados y la lista detallada de interacciones."""
     rows = fetch_all(INTERACTIONS_QUERY, (user_id,))
-    return [int(row["work_id"]) for row in rows]
+    
+    unique_work_ids = sorted(list({int(row["work_id"]) for row in rows}))
+    
+    detailed_interactions = []
+    for row in rows:
+        created_at_str = ""
+        created_at = row.get("created_at")
+        if isinstance(created_at, datetime):
+            created_at_str = created_at.isoformat()
+        elif created_at is not None:
+            created_at_str = str(created_at)
+
+        detailed_interactions.append(
+            user_pb2.UserInteraction(
+                work_id=int(row["work_id"]),
+                interaction_type=str(row.get("interaction_type") or ""),
+                created_at=created_at_str,
+            )
+        )
+
+    return unique_work_ids, detailed_interactions
 
 
 def get_user_profile(request) -> user_pb2.UserProfileResponse:
@@ -91,6 +113,7 @@ def get_user_profile(request) -> user_pb2.UserProfileResponse:
         raise UserNotFoundError(f"user {request.user_id} not found")
 
     preferences = fetch_one(PREFERENCES_QUERY, (request.user_id,))
+    work_ids, detailed_interactions = interactions_to_proto(request.user_id)
 
     return user_pb2.UserProfileResponse(
         user_id=int(user["id"]),
@@ -99,5 +122,6 @@ def get_user_profile(request) -> user_pb2.UserProfileResponse:
         last_name=user.get("last_name") or "",
         role=user.get("role") or "",
         preferences=preferences_to_proto(preferences),
-        interacted_work_ids=interacted_work_ids(request.user_id),
+        interacted_work_ids=work_ids,
+        interactions=detailed_interactions,  # Interacciones completas para gRPC
     )

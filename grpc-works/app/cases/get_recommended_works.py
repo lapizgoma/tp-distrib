@@ -1,10 +1,12 @@
 import json
+import os
 import random
 import re
 from datetime import datetime, timedelta
 
-from app.db import fetch_all, fetch_one
-from app.generated import work_pb2
+import grpc
+from app.db import fetch_all
+from app.generated import user_pb2, user_pb2_grpc, work_pb2
 
 from .search_works_for_tour import candidate_to_proto, row_to_candidate
 from .tour_planner import (
@@ -43,6 +45,7 @@ ERA_LABELS = {
     "contemporaneo": "Contemporáneo",
 }
 
+# Consultamos ÚNICAMENTE las obras desde la base de datos propia de grpc-works
 WORKS_QUERY = """
     SELECT
         w.id,
@@ -65,23 +68,52 @@ WORKS_QUERY = """
     ORDER BY w.id
 """
 
-INTERACTIONS_QUERY = """
-    SELECT
-        uwi.work_id,
-        uwi.interaction_type,
-        uwi.created_at,
-        COALESCE(w.technique, '') AS technique,
-        COALESCE(w.era, '') AS era
-    FROM user_work_interactions uwi
-    JOIN works w ON w.id = uwi.work_id
-    WHERE uwi.user_id = %s
-"""
 
-PREFERENCES_QUERY = """
-    SELECT favorite_topics, favorite_techniques, favorite_eras
-    FROM user_preferences
-    WHERE user_id = %s
-"""
+def _get_user_profile_via_grpc(user_id: int) -> tuple[dict | None, list[dict]]:
+    """Consulta las preferencias e interacciones llamando a grpc-users vía gRPC."""
+    users_service_host = os.getenv("GRPC_USERS_HOST", "localhost:50051")
+
+    try:
+        with grpc.insecure_channel(users_service_host) as channel:
+            stub = user_pb2_grpc.UserServiceStub(channel)
+            response = stub.GetUserProfile(
+                user_pb2.UserProfileRequest(user_id=user_id)
+            )
+
+            preferences = None
+            if response.HasField("preferences"):
+                preferences = {
+                    "favorite_topics": list(response.preferences.favorite_topics),
+                    "favorite_techniques": list(
+                        response.preferences.favorite_techniques
+                    ),
+                    "favorite_eras": list(response.preferences.favorite_eras),
+                }
+
+            interactions = []
+            for inter in response.interactions:
+                created_at_dt = None
+                if inter.created_at:
+                    try:
+                        created_at_dt = datetime.fromisoformat(inter.created_at)
+                    except ValueError:
+                        created_at_dt = None
+
+                interactions.append(
+                    {
+                        "work_id": inter.work_id,
+                        "interaction_type": inter.interaction_type,
+                        "created_at": created_at_dt,
+                    }
+                )
+
+            return preferences, interactions
+
+    except Exception as e:
+        print(
+            f"[gRPC Error] No se pudo consultar grpc-users para user_id {user_id}: {e}"
+        )
+        return None, []
 
 
 def _favorite_sets(preferences: dict | None) -> tuple[set[str], set[str], set[str]]:
@@ -149,27 +181,33 @@ def _topic_label(work, topic: str) -> str:
     return label or topic.capitalize()
 
 
-def _interaction_matches(work, interaction) -> bool:
-    """Indica si la interacción comparte técnica y era con la obra."""
+def _interaction_matches(work, interaction, works_by_id: dict) -> bool:
+    """Indica si la interacción comparte técnica y era con la obra actual."""
     technique = canonical_technique(work.technique)
     era = canonical_era(work.era)
     if not technique or not era:
         return False
 
+    interacted_work = works_by_id.get(interaction.get("work_id"))
+    if not interacted_work:
+        return False
+
     return (
-        canonical_technique(interaction.get("technique")) == technique
-        and canonical_era(interaction.get("era")) == era
+        canonical_technique(interacted_work.technique) == technique
+        and canonical_era(interacted_work.era) == era
     )
 
 
-def interaction_score(work, interactions, now: datetime) -> int:
+def interaction_score(work, interactions, works_by_id: dict, now: datetime) -> int:
     """Suma puntos por interacciones en obras de la misma técnica y era."""
     total = 0
     for interaction in interactions:
-        if not _interaction_matches(work, interaction):
+        if not _interaction_matches(work, interaction, works_by_id):
             continue
 
-        interaction_type = str(interaction.get("interaction_type") or "").strip().upper()
+        interaction_type = (
+            str(interaction.get("interaction_type") or "").strip().upper()
+        )
         points = INTERACTION_SCORES.get(interaction_type, 0)
         if points == 0:
             continue
@@ -177,7 +215,9 @@ def interaction_score(work, interactions, now: datetime) -> int:
         total += points
 
         created_at = interaction.get("created_at")
-        if isinstance(created_at, datetime) and created_at >= now - timedelta(days=RECENT_DAYS):
+        if isinstance(created_at, datetime) and created_at >= now - timedelta(
+            days=RECENT_DAYS
+        ):
             total += RECENT_BONUS
 
     return total
@@ -185,17 +225,25 @@ def interaction_score(work, interactions, now: datetime) -> int:
 
 def preference_score(work, preferences: dict | None) -> int:
     """Suma un punto por cada coincidencia entre preferencias y obra."""
-    favorite_topics, favorite_techniques, favorite_eras = _favorite_sets(preferences)
+    favorite_topics, favorite_techniques, favorite_eras = _favorite_sets(
+        preferences
+    )
 
     total = sum(1 for topic in work.topics if topic in favorite_topics)
-    total += TECHNIQUE_BONUS if canonical_technique(work.technique) in favorite_techniques else 0
+    total += (
+        TECHNIQUE_BONUS
+        if canonical_technique(work.technique) in favorite_techniques
+        else 0
+    )
     total += ERA_BONUS if canonical_era(work.era) in favorite_eras else 0
     return total
 
 
 def preference_reasons(work, preferences: dict | None) -> set[str]:
     """Explica cada coincidencia con las preferencias del visitante."""
-    favorite_topics, favorite_techniques, favorite_eras = _favorite_sets(preferences)
+    favorite_topics, favorite_techniques, favorite_eras = _favorite_sets(
+        preferences
+    )
     reasons = set()
 
     for topic in work.topics:
@@ -213,17 +261,16 @@ def preference_reasons(work, preferences: dict | None) -> set[str]:
     return reasons
 
 
-def interaction_reasons(work, interactions) -> set[str]:
-    """Explica los comentarios previos en obras de la misma técnica o era.
-
-    Las vistas suman puntaje, pero no generan una razón.
-    """
+def interaction_reasons(work, interactions, works_by_id: dict) -> set[str]:
+    """Explica los comentarios previos en obras de la misma técnica o era."""
     reasons = set()
     for interaction in interactions:
-        if not _interaction_matches(work, interaction):
+        if not _interaction_matches(work, interaction, works_by_id):
             continue
 
-        interaction_type = str(interaction.get("interaction_type") or "").strip().upper()
+        interaction_type = (
+            str(interaction.get("interaction_type") or "").strip().upper()
+        )
         if interaction_type != "COMMENT":
             continue
 
@@ -233,41 +280,43 @@ def interaction_reasons(work, interactions) -> set[str]:
     return reasons
 
 
-def recommendation_reasons(work, interactions, preferences: dict | None) -> list[str]:
+def recommendation_reasons(
+    work, interactions, preferences: dict | None, works_by_id: dict
+) -> list[str]:
     """Combina y deduplica las razones que explican una recomendación."""
-    reasons = interaction_reasons(work, interactions)
+    reasons = interaction_reasons(work, interactions, works_by_id)
     reasons |= preference_reasons(work, preferences)
     return sorted(reasons)
 
 
-def score_work(work, interactions, preferences, now: datetime) -> int:
+def score_work(
+    work, interactions, preferences, works_by_id: dict, now: datetime
+) -> int:
     """Calcula el puntaje total de una obra."""
-    return interaction_score(work, interactions, now) + preference_score(
-        work, preferences
-    )
+    return interaction_score(
+        work, interactions, works_by_id, now
+    ) + preference_score(work, preferences)
 
 
 def get_recommended_works(request) -> work_pb2.RecommendationListResponse:
-    """Devuelve las obras con mayor puntaje, en orden aleatorio.
-
-    El puntaje combina interacciones en obras de la misma técnica y era con
-    coincidencias de user_preferences. Las razones explican qué influyó en
-    cada recomendación. El límite menor o igual a cero devuelve una lista
-    vacía.
-    """
-
+    """Devuelve las obras recomendadas consultando el perfil del usuario mediante gRPC."""
     user_id = request.user_id
-    # Carga todas las obras desde MySQL.
+
+    # 1. Cargar obras del dominio propio (grpc-works)
     works = [row_to_candidate(row) for row in fetch_all(WORKS_QUERY)]
-    # Carga las interacciones del usuario junto con técnica y era de la obra.
-    interactions = fetch_all(INTERACTIONS_QUERY, (user_id,))
-    # Carga las preferencias del usuario, o None si no tiene fila.
-    preferences = fetch_one(PREFERENCES_QUERY, (user_id,))
+    works_by_id = {w.id: w for w in works}
+
+    # 2. Obtener preferencias e interacciones desde grpc-users vía gRPC
+    preferences, interactions = _get_user_profile_via_grpc(user_id)
+
     now = datetime.now()
 
     ranked = sorted(
         works,
-        key=lambda work: (-score_work(work, interactions, preferences, now), work.id),
+        key=lambda work: (
+            -score_work(work, interactions, preferences, works_by_id, now),
+            work.id,
+        ),
     )
     selected = ranked[: max(0, request.limit)]
     random.shuffle(selected)
@@ -276,7 +325,9 @@ def get_recommended_works(request) -> work_pb2.RecommendationListResponse:
         recommendations=[
             work_pb2.RecommendedWork(
                 work=candidate_to_proto(work),
-                reasons=recommendation_reasons(work, interactions, preferences),
+                reasons=recommendation_reasons(
+                    work, interactions, preferences, works_by_id
+                ),
             )
             for work in selected
         ]

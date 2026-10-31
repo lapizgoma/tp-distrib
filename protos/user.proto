@@ -13,6 +13,13 @@ message UserPreferences {
     repeated string favorite_eras = 3;
 }
 
+// Representación detallada de una interacción para la recomendación
+message UserInteraction {
+    int64 work_id = 1;
+    string interaction_type = 2;
+    string created_at = 3; // En ISO format string o Timestamp
+}
+
 message UserProfileResponse {
     int64 user_id = 1;
     string email = 2;
@@ -21,6 +28,7 @@ message UserProfileResponse {
     string role = 5;
     UserPreferences preferences = 6;
     repeated int64 interacted_work_ids = 7;
+    repeated UserInteraction interactions = 8;
 }
 
 // Registro de Interacción (VIEW, COMMENT, etc.)

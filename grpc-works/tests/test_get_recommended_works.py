@@ -41,8 +41,6 @@ def make_interaction(work_id: int, interaction_type: str, **overrides) -> dict:
         "work_id": work_id,
         "interaction_type": interaction_type,
         "created_at": NOW - timedelta(days=30),
-        "technique": "OLEO",
-        "era": "IMPRESIONISMO",
     }
     interaction.update(overrides)
     return interaction
@@ -50,7 +48,7 @@ def make_interaction(work_id: int, interaction_type: str, **overrides) -> dict:
 
 @pytest.fixture
 def fake_db(monkeypatch):
-    """Reemplaza las consultas por filas fijas."""
+    """Reemplaza la consulta de obras y la llamada gRPC por datos simulados."""
     state = {"works": [], "interactions": [], "preferences": None}
 
     def install(works=(), interactions=(), preferences=None):
@@ -59,15 +57,13 @@ def fake_db(monkeypatch):
         state["preferences"] = preferences
 
         def fake_fetch_all(sql, params=None):
-            if "user_work_interactions" in sql:
-                return state["interactions"]
             return state["works"]
 
-        def fake_fetch_one(sql, params=None):
-            return state["preferences"]
+        def fake_get_user_profile_via_grpc(user_id: int):
+            return state["preferences"], state["interactions"]
 
         monkeypatch.setattr(case, "fetch_all", fake_fetch_all)
-        monkeypatch.setattr(case, "fetch_one", fake_fetch_one)
+        monkeypatch.setattr(case, "_get_user_profile_via_grpc", fake_get_user_profile_via_grpc)
         return state
 
     return install
@@ -91,8 +87,9 @@ def test_preference_reasons_are_humanized():
         "favorite_techniques": '["Óleo"]',
         "favorite_eras": '["Impresionismo"]',
     }
+    works_by_id = {1: work}
 
-    assert case.recommendation_reasons(work, [], preferences) == [
+    assert case.recommendation_reasons(work, [], preferences, works_by_id) == [
         "Coincide con tu era favorita: Impresionismo",
         "Coincide con tu interés en Bodegón",
         "Coincide con tu técnica favorita: Óleo",
@@ -101,9 +98,11 @@ def test_preference_reasons_are_humanized():
 
 def test_comment_reasons_are_split_by_technique_and_era():
     work = case.row_to_candidate(make_row(1))
+    work2 = case.row_to_candidate(make_row(2))
     interactions = [make_interaction(2, "COMMENT")]
+    works_by_id = {1: work, 2: work2}
 
-    assert case.recommendation_reasons(work, interactions, None) == [
+    assert case.recommendation_reasons(work, interactions, None, works_by_id) == [
         "Comentaste obras de era Impresionismo",
         "Comentaste obras de técnica Óleo",
     ]
@@ -111,12 +110,15 @@ def test_comment_reasons_are_split_by_technique_and_era():
 
 def test_comment_reasons_are_deduplicated():
     work = case.row_to_candidate(make_row(1))
+    work2 = case.row_to_candidate(make_row(2))
+    work3 = case.row_to_candidate(make_row(3))
     interactions = [
         make_interaction(2, "COMMENT"),
         make_interaction(3, "COMMENT"),
     ]
+    works_by_id = {1: work, 2: work2, 3: work3}
 
-    assert case.recommendation_reasons(work, interactions, None) == [
+    assert case.recommendation_reasons(work, interactions, None, works_by_id) == [
         "Comentaste obras de era Impresionismo",
         "Comentaste obras de técnica Óleo",
     ]
@@ -124,9 +126,11 @@ def test_comment_reasons_are_deduplicated():
 
 def test_views_do_not_add_reasons():
     work = case.row_to_candidate(make_row(1))
+    work2 = case.row_to_candidate(make_row(2))
     interactions = [make_interaction(2, "VIEW")]
+    works_by_id = {1: work, 2: work2}
 
-    assert case.recommendation_reasons(work, interactions, None) == []
+    assert case.recommendation_reasons(work, interactions, None, works_by_id) == []
 
 
 def test_zero_score_has_no_reasons(fake_db):
