@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useWork } from '../hooks/useWork';
 import { addComment } from '../api/commentsRestApi';
+import { registerWorkViewGrpc } from '../api/compareWorksApi';
 import { AVAILABILITY_LABELS, LOCATION_LABELS, ERA_LABELS, TECHNIQUE_LABELS } from '../types/works.types';
 import { ArrowLeft, Palette, User, Send, Loader2, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,12 @@ export function WorkDetailView() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { work, loading, error, refetch } = useWork(id);
+
+  useEffect(() => {
+    if (work && id) {
+      registerWorkViewGrpc(id);
+    }
+  }, [id, work]);
 
   const [commentText, setCommentText] = useState('');
   const [submitting, setSubmitting] = useState(false);

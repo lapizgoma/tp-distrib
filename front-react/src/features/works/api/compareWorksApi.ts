@@ -52,3 +52,18 @@ export async function compareWorks(ids: number[], signal?: AbortSignal): Promise
     throw error;
   }
 }
+
+export async function registerWorkViewGrpc(workId: number | string): Promise<void> {
+  try {
+    await grpcRequest<{ success: boolean }>(`/works/${workId}/interactions`, {
+      method: 'POST',
+      body: {
+        work_id: Number(workId),
+        interaction_type: 'VIEW',
+      },
+    });
+  } catch (error) {
+    // Registro silencioso en consola para no bloquear ni interrumpir al usuario
+    console.debug('Visualización VIEW no registrada:', error);
+  }
+}

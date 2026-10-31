@@ -1,13 +1,16 @@
 """Punto de entrada del servicio gRPC de usuarios."""
 
 import logging
+import sys
 import os
+sys.path.append(os.path.join(os.path.dirname(__file__), "generated"))
 from concurrent import futures
 
 import grpc
 import mysql.connector
 
 from app.cases.get_user_profile import UserNotFoundError, get_user_profile
+from app.cases.register_interaction import register_interaction
 from app.config import load_env
 from app.generated import user_pb2_grpc
 
@@ -26,6 +29,17 @@ class UserServiceServicer(user_pb2_grpc.UserServiceServicer):
             context.abort(grpc.StatusCode.INTERNAL, "database error")
         except Exception:
             logging.exception("GetUserProfile unexpected error")
+            context.abort(grpc.StatusCode.INTERNAL, "internal error")
+
+    def RegisterInteraction(self, request, context):
+        """Registra una nueva interacción (VIEW) para el usuario."""
+        try:
+            return register_interaction(request)
+        except mysql.connector.Error:
+            logging.exception("RegisterInteraction database error")
+            context.abort(grpc.StatusCode.INTERNAL, "database error")
+        except Exception:
+            logging.exception("RegisterInteraction unexpected error")
             context.abort(grpc.StatusCode.INTERNAL, "internal error")
 
 

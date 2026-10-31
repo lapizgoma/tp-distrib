@@ -5,7 +5,7 @@ import warnings
 
 from . import user_pb2 as user__pb2
 
-GRPC_GENERATED_VERSION = '1.84.0'
+GRPC_GENERATED_VERSION = '1.84.1'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -40,6 +40,11 @@ class UserServiceStub:
                 request_serializer=user__pb2.UserProfileRequest.SerializeToString,
                 response_deserializer=user__pb2.UserProfileResponse.FromString,
                 _registered_method=True)
+        self.RegisterInteraction = channel.unary_unary(
+                '/museum.users.UserService/RegisterInteraction',
+                request_serializer=user__pb2.RegisterInteractionRequest.SerializeToString,
+                response_deserializer=user__pb2.RegisterInteractionResponse.FromString,
+                _registered_method=True)
 
 
 class UserServiceServicer:
@@ -52,6 +57,12 @@ class UserServiceServicer:
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def RegisterInteraction(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_UserServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -59,6 +70,11 @@ def add_UserServiceServicer_to_server(servicer, server):
                     servicer.GetUserProfile,
                     request_deserializer=user__pb2.UserProfileRequest.FromString,
                     response_serializer=user__pb2.UserProfileResponse.SerializeToString,
+            ),
+            'RegisterInteraction': grpc.unary_unary_rpc_method_handler(
+                    servicer.RegisterInteraction,
+                    request_deserializer=user__pb2.RegisterInteractionRequest.FromString,
+                    response_serializer=user__pb2.RegisterInteractionResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -89,6 +105,33 @@ class UserService:
             '/museum.users.UserService/GetUserProfile',
             user__pb2.UserProfileRequest.SerializeToString,
             user__pb2.UserProfileResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RegisterInteraction(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/museum.users.UserService/RegisterInteraction',
+            user__pb2.RegisterInteractionRequest.SerializeToString,
+            user__pb2.RegisterInteractionResponse.FromString,
             options,
             channel_credentials,
             insecure,

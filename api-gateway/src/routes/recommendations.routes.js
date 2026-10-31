@@ -46,5 +46,34 @@ export default function recommendationsRoutes({ clients, call }) {
     }
   });
 
+  // POST /api/grpc/works/:id/interactions — Registrar interacción de visualización (VIEW)
+  router.post('/works/:id/interactions', auth(['VISITANTE', 'CURADOR', 'ADMINISTRADOR']), async (req, res) => {
+    const userId = Number(req.user.id);
+    if (!Number.isSafeInteger(userId) || userId <= 0) {
+      return res.status(401).json({ error: 'El token no tiene un id válido' });
+    }
+
+    const workId = Number(req.params.id);
+    if (!Number.isSafeInteger(workId) || workId <= 0) {
+      return res.status(400).json({ error: 'El ID de la obra debe ser un entero positivo' });
+    }
+
+    try {
+      const response = await call(
+        clients.users,
+        'RegisterInteraction',
+        {
+          user_id: userId,
+          work_id: workId,
+          interaction_type: req.body.interaction_type || 'VIEW',
+        },
+        req.user,
+      );
+      res.json(response);
+    } catch (err) {
+      sendGrpcError(res, err);
+    }
+  });
+
   return router;
 }
