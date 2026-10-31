@@ -109,6 +109,52 @@ def filter_rows_by_window(
     return filtered
 
 
+def _slot_bounds(slot) -> tuple[str, datetime, datetime] | None:
+    """Normaliza una franja de sala y descarta las inválidas."""
+    room = canonical_location(getattr(slot, "room", ""))
+    start = parse_datetime(getattr(slot, "start_datetime", ""))
+    end = parse_datetime(getattr(slot, "end_datetime", ""))
+    if not room or start is None or end is None or end <= start:
+        return None
+    return room, start, end
+
+
+def filter_rows_by_room_schedule(rows: list[dict], room_schedule) -> list[dict]:
+    """Deja solo eventos que se solapan con la franja de su sala.
+
+    Un evento sin duración cuenta solo si empieza dentro de la franja.
+    """
+    slots: dict[str, tuple[datetime, datetime]] = {}
+    for slot in room_schedule:
+        bounds = _slot_bounds(slot)
+        if bounds is not None:
+            room, start, end = bounds
+            slots[room] = (start, end)
+
+    filtered = []
+    for row in rows:
+        slot = slots.get(canonical_location(row.get("location")))
+        if slot is None:
+            continue
+
+        slot_start, slot_end = slot
+        event_start = parse_datetime(row.get("datetime"))
+        if event_start is None:
+            continue
+
+        duration = _duration_minutes(row)
+        if duration == 0:
+            if slot_start <= event_start < slot_end:
+                filtered.append(row)
+            continue
+
+        event_end = event_start + timedelta(minutes=duration)
+        if event_start < slot_end and event_end > slot_start:
+            filtered.append(row)
+
+    return filtered
+
+
 def row_to_event(row: dict) -> event_pb2.Event:
     """Convierte una fila de MySQL en un mensaje protobuf Event."""
     return event_pb2.Event(
