@@ -22,6 +22,7 @@ const row = (overrides = {}) => ({
   news_type: 'EVENT_UPDATED',
   title: 'Evento modificado',
   message: 'Se modificó el evento Charla X',
+  is_read: 0,
   created_at: new Date('2026-10-30T12:00:00.123Z'),
   ...overrides,
 });
@@ -53,6 +54,7 @@ describe('listado de notificaciones de un usuario', () => {
         newsType: 'EVENT_UPDATED',
         title: 'Evento modificado',
         message: 'Se modificó el evento Charla X',
+        isRead: false,
         createdAt: '2026-10-30T12:00:00.123Z',
       },
     ]);
@@ -66,5 +68,65 @@ describe('listado de notificaciones de un usuario', () => {
     const result = await createNotificationsRepository(pool).listForUser({ userId: 4, limit: 21, offset: 0 });
 
     expect(result).toEqual([]);
+  });
+
+  test('unreadOnly filtra las no leídas sin cambiar el orden ni la paginación', async () => {
+    const { calls, pool } = fakePool([row()]);
+
+    await createNotificationsRepository(pool).listForUser({
+      userId: 4,
+      limit: 21,
+      offset: 0,
+      unreadOnly: true,
+    });
+
+    expect(calls[0].sql).toMatch(/WHERE user_id = \? AND is_read = 0/);
+    expect(calls[0].sql).toMatch(/ORDER BY created_at DESC, id DESC/);
+    expect(calls[0].sql).toMatch(/LIMIT \? OFFSET \?/);
+    expect(calls[0].params).toEqual([4, 21, 0]);
+  });
+
+  test('sin unreadOnly no filtra por is_read', async () => {
+    const { calls, pool } = fakePool();
+
+    await createNotificationsRepository(pool).listForUser({ userId: 4, limit: 21, offset: 0 });
+
+    expect(calls[0].sql).not.toMatch(/is_read = 0/);
+  });
+});
+
+function fakeUpdatePool(affectedRows) {
+  const calls = [];
+  return {
+    calls,
+    pool: {
+      query: async (sql, params) => {
+        calls.push({ sql, params });
+        return [{ affectedRows }];
+      },
+    },
+  };
+}
+
+describe('marcar notificaciones como leídas', () => {
+  test('actualiza solo las no leídas del usuario y devuelve las filas afectadas', async () => {
+    const { calls, pool } = fakeUpdatePool(3);
+
+    const updated = await createNotificationsRepository(pool).markAllRead(4);
+
+    expect(updated).toBe(3);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].sql).toMatch(/UPDATE notifications/);
+    expect(calls[0].sql).toMatch(/SET is_read = 1/);
+    expect(calls[0].sql).toMatch(/WHERE user_id = \? AND is_read = 0/);
+    expect(calls[0].params).toEqual([4]);
+  });
+
+  test('si no había no leídas devuelve cero', async () => {
+    const { pool } = fakeUpdatePool(0);
+
+    const updated = await createNotificationsRepository(pool).markAllRead(4);
+
+    expect(updated).toBe(0);
   });
 });

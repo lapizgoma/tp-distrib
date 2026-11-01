@@ -30,19 +30,33 @@ const notification = (id) => ({
   newsType: 'EVENT_CREATED',
   title: 'Nuevo evento',
   message: 'Nuevo evento: Charla X',
+  isRead: false,
   createdAt: '2026-10-30T12:00:00.000Z',
 });
 
 // Ya ordenadas de la más nueva a la más vieja, como las devuelve el repositorio.
 const notifications = (count) => Array.from({ length: count }, (_, i) => notification(count - i));
 
-function setup({ rows = [], failList = false, ping = async () => {}, healthTimeoutMs } = {}) {
+function setup({
+  rows = [],
+  failList = false,
+  failMark = false,
+  ping = async () => {},
+  healthTimeoutMs,
+} = {}) {
   const calls = [];
+  const markCalls = [];
   const repository = {
     listForUser: async (args) => {
       calls.push(args);
       if (failList) throw new Error('ER_ACCESS_DENIED: secreto de la base');
-      return rows.slice(args.offset, args.offset + args.limit);
+      const filtered = args.unreadOnly ? rows.filter((n) => !n.isRead) : rows;
+      return filtered.slice(args.offset, args.offset + args.limit);
+    },
+    markAllRead: async (userId) => {
+      markCalls.push(userId);
+      if (failMark) throw new Error('ER_ACCESS_DENIED: secreto de la base');
+      return rows.filter((n) => !n.isRead).length;
     },
   };
   const app = createApp({
@@ -52,7 +66,7 @@ function setup({ rows = [], failList = false, ping = async () => {}, healthTimeo
     logger: silentLogger,
     healthTimeoutMs,
   });
-  return { app, calls };
+  return { app, calls, markCalls };
 }
 
 const get = (app, url, token = sign(claims())) =>
@@ -161,7 +175,7 @@ describe('paginación', () => {
     const res = await get(app, '/api/notifications');
 
     expect(res.status).toBe(200);
-    expect(calls).toEqual([{ userId: 4, limit: 21, offset: 0 }]);
+    expect(calls).toEqual([{ userId: 4, limit: 21, offset: 0, unreadOnly: false }]);
     expect(res.body).toMatchObject({ page: 0, size: 20, hasMore: false });
     expect(res.body.content).toHaveLength(3);
   });
@@ -182,7 +196,7 @@ describe('paginación', () => {
 
     const res = await get(app, '/api/notifications?page=2&size=20');
 
-    expect(calls[0]).toEqual({ userId: 4, limit: 21, offset: 40 });
+    expect(calls[0]).toEqual({ userId: 4, limit: 21, offset: 40, unreadOnly: false });
     expect(res.body).toMatchObject({ page: 2, size: 20, hasMore: false });
     expect(res.body.content.map((n) => n.id)).toEqual([5, 4, 3, 2, 1]);
   });
@@ -272,6 +286,104 @@ describe('errores y rutas', () => {
     const res = await get(app, '/api/notifications');
 
     expectProblem(res, 500, '/api/notifications');
+    expect(res.text).not.toContain('secreto de la base');
+  });
+});
+
+describe('notificaciones no leídas', () => {
+  test('unreadOnly=true filtra las leídas y devuelve isRead en cada una', async () => {
+    const rows = notifications(2).map((row, index) => ({ ...row, isRead: index === 0 }));
+    const { app, calls } = setup({ rows });
+
+    const res = await get(app, '/api/notifications?unreadOnly=true');
+
+    expect(res.status).toBe(200);
+    expect(calls).toEqual([{ userId: 4, limit: 21, offset: 0, unreadOnly: true }]);
+    expect(res.body.content.map((n) => n.id)).toEqual([1]);
+    expect(res.body.content[0].isRead).toBe(false);
+  });
+
+  test('sin unreadOnly el repositorio recibe false y devuelve todas', async () => {
+    const rows = notifications(2).map((row, index) => ({ ...row, isRead: index === 0 }));
+    const { app, calls } = setup({ rows });
+
+    const res = await get(app, '/api/notifications');
+
+    expect(res.status).toBe(200);
+    expect(calls[0].unreadOnly).toBe(false);
+    expect(res.body.content).toHaveLength(2);
+    expect(res.body.content[0].isRead).toBe(true);
+  });
+
+  test.each(['yes', '1', 'TRUE', '0', 'si'])(
+    'unreadOnly=%s responde 400 y no consulta la base',
+    async (value) => {
+      const { app, calls } = setup();
+
+      const res = await get(app, `/api/notifications?unreadOnly=${value}`);
+
+      expectProblem(res, 400, '/api/notifications');
+      expect(calls).toHaveLength(0);
+    },
+  );
+});
+
+describe('PATCH /api/notifications/read', () => {
+  const patch = (app, token = sign(claims())) =>
+    request(app).patch('/api/notifications/read').set('Authorization', `Bearer ${token}`);
+
+  test('sin token responde 401 y no marca nada', async () => {
+    const { app, markCalls } = setup();
+
+    const res = await request(app).patch('/api/notifications/read');
+
+    expectProblem(res, 401, '/api/notifications/read');
+    expect(markCalls).toHaveLength(0);
+  });
+
+  test('marca como leídas las notificaciones del usuario del token', async () => {
+    const { app, markCalls } = setup({ rows: notifications(3) });
+
+    const res = await patch(app, sign(claims({ userId: 7 })));
+
+    expect(res.status).toBe(204);
+    expect(res.text).toBe('');
+    expect(markCalls).toEqual([7]);
+  });
+
+  test('ignora un userId pasado por parámetro', async () => {
+    const { app, markCalls } = setup();
+
+    const res = await request(app)
+      .patch('/api/notifications/read?userId=99')
+      .set('Authorization', `Bearer ${sign(claims())}`);
+
+    expect(res.status).toBe(204);
+    expect(markCalls).toEqual([4]);
+  });
+
+  test.each(['get', 'post', 'put', 'delete'])(
+    'el método %s responde 405 con Allow: PATCH',
+    async (method) => {
+      const { app, markCalls } = setup();
+
+      const res = await request(app)[method]('/api/notifications/read').set(
+        'Authorization',
+        `Bearer ${sign(claims())}`,
+      );
+
+      expectProblem(res, 405, '/api/notifications/read');
+      expect(res.headers.allow).toBe('PATCH');
+      expect(markCalls).toHaveLength(0);
+    },
+  );
+
+  test('si la base falla responde 500 sin mostrar el detalle del error', async () => {
+    const { app } = setup({ failMark: true });
+
+    const res = await patch(app);
+
+    expectProblem(res, 500, '/api/notifications/read');
     expect(res.text).not.toContain('secreto de la base');
   });
 });
