@@ -21,6 +21,9 @@ export function EventFormView() {
   const { event, loading, error: loadError } = useEvent(isEdit ? id : undefined);
   const { create, update, submitting, error: submitError } = useEventMutations();
 
+  // Destino explícito para no salir de la app si se entró directo por URL o se refrescó.
+  const goBack = () => navigate(isEdit && id ? `/eventos/${id}` : '/eventos');
+
   const handleSubmit = async (payload: EventRequestDTO) => {
     if (isEdit && id) {
       const updated = await update(id, payload);
@@ -40,7 +43,7 @@ export function EventFormView() {
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-      <Button variant="ghost" size="sm" className="w-fit" onClick={() => navigate(-1)}>
+      <Button variant="ghost" size="sm" className="w-fit" onClick={goBack}>
         <ArrowLeft className="size-4" />
         Volver
       </Button>
@@ -83,7 +86,7 @@ export function EventFormView() {
               error={submitError}
               submitLabel={isEdit ? 'Guardar cambios' : 'Crear evento'}
               onSubmit={handleSubmit}
-              onCancel={() => navigate(-1)}
+              onCancel={goBack}
             />
           )}
         </CardContent>
