@@ -10,7 +10,7 @@ Trabajo práctico grupal para la materia "Desarrollo de Software en Sistemas Dis
 
 ## Arquitectura
 
-El frontend (React + Vite) corre en el host y consume todo a través de `/api`, que Vite proxya a `http://localhost:8080` (el `backend-proxy`). El proxy deriva las requests a REST, GraphQL o al API Gateway de gRPC según corresponda.
+El frontend (React + Vite) corre en el host y consume todo a través de `/api`, que Vite proxya a `http://localhost:8080` (el `backend-proxy`). El proxy deriva las requests a REST, GraphQL, al API Gateway de gRPC, a notificaciones o a auditoría según corresponda.
 
 | Servicio | Tecnología | Puerto | Descripción |
 | --- | --- | --- | --- |
@@ -18,6 +18,7 @@ El frontend (React + Vite) corre en el host y consume todo a través de `/api`, 
 | `backend-proxy` | Go | 8080 | Punto de entrada único para el frontend |
 | `backend-rest` | Java (Spring Boot) | 8081 | API REST |
 | `backend-graphql` | Go | 8082 | API GraphQL |
+| `audit` | Go | 8083 | Consumidor de eventos y API de auditoría |
 | `api-gateway` | Node.js | 8090 | Gateway de los servicios gRPC |
 | `grpc-works` | Python | 50051 | Servicio gRPC de obras |
 | `grpc-events` | Python | 50052 | Servicio gRPC de eventos |
@@ -182,6 +183,46 @@ Campos que pueden aparecer en `changes`: `eventTitle`, `description`,
 `eventDateTime`, `duration`, `leadCuratorId`, `maximumCapacity`, `eventType`.
 Los valores mantienen su tipo JSON: texto, número, enum o `null`.
 
+## Auditoría
+
+El servicio `audit` consume `museum.events` con su propio grupo
+(`audit-service`) y persiste cada novedad en la tabla `audit_log`. Deduplica por
+`message_id` y confirma el offset de Kafka recién después del `INSERT`, así que
+un mensaje no se pierde si el proceso se cae. Los mensajes inválidos o que no se
+pueden persistir se copian a `audit-dlq`.
+
+La consulta se hace con:
+
+```
+GET /api/audit/events
+```
+
+A través del proxy unificado queda en
+`http://localhost:8080/api/audit/events`; también se puede llamar directo al
+servicio en `http://localhost:8083/api/audit/events`. Requiere un JWT con rol
+`CURADOR` o `ADMINISTRADOR` (mismo `JWT_SECRET` y `JWT_ISSUER` que el backend
+REST).
+
+Parámetros opcionales (se combinan con AND):
+
+| Parámetro | Descripción |
+| --- | --- |
+| `eventId` | ID del evento |
+| `newsType` | `EVENT_CREATED`, `EVENT_UPDATED` o `EVENT_CANCELLED` |
+| `responsibleUserId` | ID del usuario que realizó la operación |
+| `from` / `to` | Rango de `occurredAt` en RFC3339 (UTC) |
+| `includePayload` | `true` para incluir el mensaje original en `payload` |
+| `page` | Página, desde `0` (default `0`) |
+| `size` | Tamaño de página entre `1` y `200` (default `50`) |
+
+La respuesta tiene la forma `{ "content": [...], "page": 0, "size": 50,
+"hasMore": false }`, ordenada por `occurredAt` y luego por `id`.
+
+```bash
+curl "http://localhost:8080/api/audit/events?newsType=EVENT_UPDATED&size=10" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
 ## Comandos útiles
 
 ```bash
@@ -217,6 +258,7 @@ npm run build
 ```
 .
 ├── api-gateway/        # Gateway Node.js para gRPC
+├── audit/              # Consumidor de auditoría y API de consulta (Go)
 ├── backend-graphql/    # Backend GraphQL (Go)
 ├── backend-proxy/      # Proxy unificado (Go)
 ├── backend-rest/       # Backend REST (Java)

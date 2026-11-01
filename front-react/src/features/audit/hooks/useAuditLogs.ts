@@ -1,78 +1,65 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchAuditEvents } from '../api/auditApi';
+import { DEFAULT_AUDIT_FILTERS } from '../types/audit.types';
 import type { AuditEvent, AuditFilters } from '../types/audit.types';
 
-export function useAuditLogs(initialFilters: AuditFilters = { page: 0, size: 20 }) {
+/**
+ * Carga la auditoría aplicando los filtros recibidos.
+ * Si `enabled` es false no se consulta (ej. rango de fechas inválido).
+ */
+export function useAuditLogs(
+  initialFilters: AuditFilters = DEFAULT_AUDIT_FILTERS,
+  enabled = true,
+) {
   const [filters, setFilters] = useState<AuditFilters>(initialFilters);
-  const [data, setData] = useState<AuditEvent[]>([]);
+  const [logs, setLogs] = useState<AuditEvent[]>([]);
   const [hasMore, setHasMore] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const reload = useCallback(async (signal?: AbortSignal) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetchAuditEvents(filters);
-      if (!signal?.aborted) {
-        setData(res.content);
-        setHasMore(res.hasMore);
-      }
-    } catch (err: unknown) {
-      if (!signal?.aborted) {
-        const message = err instanceof Error ? err.message : 'Error al cargar los logs de auditoría';
-        setError(message);
-      }
-    } finally {
-      if (!signal?.aborted) {
-        setLoading(false);
-      }
-    }
-  }, [filters]);
+  const requestKey = `${JSON.stringify(filters)}#${reloadKey}`;
+
+  const filtersRef = useRef(filters);
+  useEffect(() => {
+    filtersRef.current = filters;
+  });
 
   useEffect(() => {
-    let isSubscribed = true;
+    if (!enabled) return;
 
-    async function executeFetch() {
-      // 1. Movemos la actualización de estado dentro del microtask asíncrono
-      await Promise.resolve();
-      if (!isSubscribed) return;
+    const controller = new AbortController();
 
-      setLoading(true);
-      setError(null);
+    fetchAuditEvents(filtersRef.current, controller.signal)
+      .then((res) => {
+        setLogs(res.content);
+        setHasMore(res.hasMore);
+        setError(null);
+        setLoadedKey(requestKey);
+      })
+      .catch((err: Error) => {
+        if (err.name === 'AbortError') return;
+        setLogs([]);
+        setHasMore(false);
+        setError(err.message);
+        setLoadedKey(requestKey);
+      });
 
-      try {
-        const res = await fetchAuditEvents(filters);
-        if (isSubscribed) {
-          setData(res.content);
-          setHasMore(res.hasMore);
-        }
-      } catch (err: unknown) {
-        if (isSubscribed) {
-          const message = err instanceof Error ? err.message : 'Error al cargar los logs de auditoría';
-          setError(message);
-        }
-      } finally {
-        if (isSubscribed) {
-          setLoading(false);
-        }
-      }
-    }
+    return () => controller.abort();
+  }, [enabled, requestKey]);
 
-    void executeFetch();
+  const reload = useCallback(() => setReloadKey((key) => key + 1), []);
 
-    return () => {
-      isSubscribed = false;
-    };
-  }, [filters]);
+  const reset = useCallback(() => setFilters(DEFAULT_AUDIT_FILTERS), []);
 
   return {
-    logs: data,
+    logs,
     hasMore,
-    loading,
-    error,
+    loading: enabled && loadedKey !== requestKey,
+    error: enabled ? error : null,
     filters,
     setFilters,
     reload,
+    reset,
   };
 }
