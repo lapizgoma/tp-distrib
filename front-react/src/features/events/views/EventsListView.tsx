@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { BookmarkPlus, CalendarDays, IdCard, Ticket } from 'lucide-react';
+import { BookmarkPlus, CalendarDays, CalendarPlus, IdCard, Ticket } from 'lucide-react';
 import { toast } from 'sonner';
 import type { EventFilters, EventType, SavedFilterRequestDTO } from '../types/events.types';
 import { useEvents } from '../hooks/useEvents';
@@ -34,6 +34,7 @@ export function EventsListView() {
   const filters = useMemo(() => filtersFromParams(searchParams), [searchParams]);
   const { events, loading, error } = useEvents(filters);
   const canSaveFilter = useCanAccess(['VISITANTE', 'ADMINISTRADOR', 'CURADOR']);
+  const canManage = useCanAccess(['CURADOR', 'ADMINISTRADOR']);
 
   const [saveOpen, setSaveOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -108,10 +109,18 @@ export function EventsListView() {
           <CalendarDays className="size-4" />
           {loading ? 'Buscando eventos…' : `${events.length} evento(s) encontrado(s)`}
         </p>
-        <Button variant="link" size="sm" render={<Link to="/eventos/mis-filtros" />}>
-          <IdCard className="size-4" />
-          Mis filtros guardados
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {canManage && (
+            <Button size="sm" render={<Link to="/eventos/nuevo" />}>
+              <CalendarPlus className="size-4" />
+              Nuevo evento
+            </Button>
+          )}
+          <Button variant="link" size="sm" render={<Link to="/eventos/mis-filtros" />}>
+            <IdCard className="size-4" />
+            Mis filtros guardados
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -136,6 +145,12 @@ export function EventsListView() {
           <p className="text-sm text-muted-foreground">
             Probá ampliar el rango de fechas o quitar algún criterio.
           </p>
+          {canManage && (
+            <Button className="mt-2" render={<Link to="/eventos/nuevo" />}>
+              <CalendarPlus className="size-4" />
+              Crear el primer evento
+            </Button>
+          )}
         </div>
       )}
 
