@@ -1,4 +1,5 @@
-import { isTokenValid, useAuthStore } from '@/shared/store/authStore';
+import { canAccess } from '@/shared/auth/permissions';
+import { useAuthStore } from '@/shared/store/authStore';
 import type { UserRole } from '@/features/auth/types/user-role.types';
 
 /**
@@ -10,8 +11,5 @@ export function useCanAccess(roles?: UserRole[]): boolean {
   const token = useAuthStore((state) => state.token);
   const user = useAuthStore((state) => state.user);
 
-  if (!isTokenValid(token)) return false;
-  if (!roles || roles.length === 0) return true;
-  if (!user) return false;
-  return roles.includes(user.role);
+  return canAccess({ requiresAuth: true, roles }, { token, user });
 }
