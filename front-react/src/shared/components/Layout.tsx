@@ -3,6 +3,7 @@ import { Landmark, LogIn, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from 'cn';
 import { Button } from '@/components/ui/button';
+import { NotificationsBell } from '@/features/notifications/components/NotificationsBell';
 import { isTokenValid, useAuthStore } from '@/shared/store/authStore';
 
 const navItems = [
@@ -72,17 +73,20 @@ export function Layout() {
             </NavLink>
           ))}
 
-          {isLogged ? (
-            <Button variant="outline" size="sm" onClick={handleLogout}>
-              <LogOut className="size-4" />
-              Cerrar sesión
-            </Button>
-          ) : (
-            <Button size="sm" onClick={() => navigate('/login')}>
-              <LogIn className="size-4" />
-              Iniciar sesión
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {isLogged && <NotificationsBell />}
+            {isLogged ? (
+              <Button variant="outline" size="sm" onClick={handleLogout}>
+                <LogOut className="size-4" />
+                Cerrar sesión
+              </Button>
+            ) : (
+              <Button size="sm" onClick={() => navigate('/login')}>
+                <LogIn className="size-4" />
+                Iniciar sesión
+              </Button>
+            )}
+          </div>
         </nav>
       </header>
 
