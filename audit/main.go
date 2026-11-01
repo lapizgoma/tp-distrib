@@ -157,10 +157,22 @@ func consumeLoop(ctx context.Context, reader *kafka.Reader, records chan<- kafka
 	}
 }
 
+// offsetCommitter es lo unico que persistLoop necesita de *kafka.Reader:
+// confirmar offsets. *kafka.Reader ya cumple la interfaz.
+type offsetCommitter interface {
+	CommitMessages(ctx context.Context, msgs ...kafka.Message) error
+}
+
+// messageWriter es lo unico que persistLoop necesita de *kafka.Writer:
+// publicar en el DLQ. *kafka.Writer ya cumple la interfaz.
+type messageWriter interface {
+	WriteMessages(ctx context.Context, msgs ...kafka.Message) error
+}
+
 // persistLoop transforma el mensaje en una fila de audit_log y recien despues
 // confirma el offset. Es un solo goroutine a proposito: asi los commits de un
 // mismo partition salen en orden y no se pisa un offset menor con uno mayor.
-func persistLoop(ctx context.Context, cancel context.CancelFunc, db *sql.DB, reader *kafka.Reader, dlq *kafka.Writer, records <-chan kafka.Message) {
+func persistLoop(ctx context.Context, cancel context.CancelFunc, db *sql.DB, reader offsetCommitter, dlq messageWriter, records <-chan kafka.Message) {
 	for msg := range records {
 		var news EventNewsMessage
 		cause := ""
@@ -194,6 +206,9 @@ func persistLoop(ctx context.Context, cancel context.CancelFunc, db *sql.DB, rea
 			var changesJSON []byte
 			if len(news.Changes) > 0 {
 				changesJSON, err = json.Marshal(news.Changes)
+				if err != nil {
+					cause = "changes no serializable: " + err.Error()
+				}
 			}
 
 			if cause == "" {
@@ -264,10 +279,8 @@ func persistLoop(ctx context.Context, cancel context.CancelFunc, db *sql.DB, rea
 	}
 }
 
-// commitMessage usa un contexto propio porque el ctx principal puede estar
-// cancelado por SIGTERM justo despues de persistir. Si el commit falla, Kafka
-// reentrega el mensaje y el unique key de message_id lo absorbe.
-func commitMessage(reader *kafka.Reader, msg kafka.Message) {
+// si falla el commit por algún problema con kafka, la id de la db cubre de duplicados.
+func commitMessage(reader offsetCommitter, msg kafka.Message) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
