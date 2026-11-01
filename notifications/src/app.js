@@ -16,11 +16,24 @@ function readInteger(raw, fallback) {
   return Number.isSafeInteger(value) ? { value } : { invalid: true };
 }
 
-function onlyGet(req, res, next) {
-  if (req.method === 'GET') return next();
-  res.set('Allow', 'GET');
-  return sendProblem(req, res, 405, 'solo se permite GET');
+// Booleano estricto. Ausente o vacío -> valor por defecto.
+function readBoolean(raw, fallback) {
+  if (raw === undefined || raw === '') return { value: fallback };
+  if (raw === 'true') return { value: true };
+  if (raw === 'false') return { value: false };
+  return { invalid: true };
 }
+
+function onlyMethod(method) {
+  return (req, res, next) => {
+    if (req.method === method) return next();
+    res.set('Allow', method);
+    return sendProblem(req, res, 405, `solo se permite ${method}`);
+  };
+}
+
+const onlyGet = onlyMethod('GET');
+const onlyPatch = onlyMethod('PATCH');
 
 // Todo se inyecta (repositorio, ping a la base, config del JWT) para testear
 // el HTTP con supertest sin MySQL ni Kafka.
@@ -65,6 +78,11 @@ export function createApp({
       return sendProblem(req, res, 400, `size debe ser un entero entre ${MIN_PAGE_SIZE} y ${MAX_PAGE_SIZE}`);
     }
 
+    const unreadParam = readBoolean(req.query.unreadOnly, false);
+    if (unreadParam.invalid) {
+      return sendProblem(req, res, 400, 'unreadOnly debe ser true o false');
+    }
+
     const page = pageParam.value;
     const size = sizeParam.value;
     const offset = page * size;
@@ -74,9 +92,24 @@ export function createApp({
 
     try {
       // Se pide una fila de más para saber si hay otra página sin hacer COUNT.
-      const rows = await repository.listForUser({ userId: req.userId, limit: size + 1, offset });
+      const rows = await repository.listForUser({
+        userId: req.userId,
+        limit: size + 1,
+        offset,
+        unreadOnly: unreadParam.value,
+      });
       const hasMore = rows.length > size;
       return res.json({ content: hasMore ? rows.slice(0, size) : rows, page, size, hasMore });
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  // Marca como leídas todas las notificaciones del usuario autenticado.
+  app.all('/api/notifications/read', onlyPatch, auth, async (req, res, next) => {
+    try {
+      await repository.markAllRead(req.userId);
+      return res.status(204).end();
     } catch (err) {
       return next(err);
     }
@@ -88,7 +121,7 @@ export function createApp({
   app.use((err, req, res, next) => {
     logger.error(`${req.method} ${req.path}: ${err.message}`);
     if (res.headersSent) return next(err);
-    return sendProblem(req, res, 500, 'no se pudieron consultar las notificaciones');
+    return sendProblem(req, res, 500, 'no se pudieron procesar las notificaciones');
   });
 
   return app;

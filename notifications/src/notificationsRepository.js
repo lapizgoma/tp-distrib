@@ -19,11 +19,22 @@ ON DUPLICATE KEY UPDATE id = id`;
 // Listado de un usuario, de la mas nueva a la mas vieja. El indice
 // (user_id, created_at) sirve el filtro y el orden. No devuelve user_id.
 const SELECT_BY_USER = `
-SELECT id, message_id, event_id, news_type, title, message, created_at
+SELECT id, message_id, event_id, news_type, title, message, is_read, created_at
 FROM notifications
 WHERE user_id = ?
 ORDER BY created_at DESC, id DESC
 LIMIT ? OFFSET ?`;
+
+// Mismo listado, solo las no leidas. El indice (user_id, is_read, created_at)
+// cubre el filtro y el orden.
+const SELECT_UNREAD_BY_USER = `
+SELECT id, message_id, event_id, news_type, title, message, is_read, created_at
+FROM notifications
+WHERE user_id = ? AND is_read = 0
+ORDER BY created_at DESC, id DESC
+LIMIT ? OFFSET ?`;
+
+const MARK_ALL_READ = 'UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0';
 
 
 // Fila de MySQL -> formato de la API. created_at sale como Date (la conexion
@@ -36,12 +47,10 @@ function toApiNotification(row) {
     newsType: row.news_type,
     title: row.title,
     message: row.message,
+    isRead: Boolean(row.is_read),
     createdAt: new Date(row.created_at).toISOString(),
   };
 }
-
-
-
 
 
 export function createNotificationsRepository(pool, { chunkSize = CHUNK_SIZE } = {}) {
@@ -94,10 +103,18 @@ export function createNotificationsRepository(pool, { chunkSize = CHUNK_SIZE } =
 
   // pool.query (no execute): en MySQL 8 los parametros numericos de LIMIT/OFFSET
   // fallan con sentencias preparadas.
-  async function listForUser({ userId, limit, offset }) {
-    const [rows] = await pool.query(SELECT_BY_USER, [userId, limit, offset]);
+  async function listForUser({ userId, limit, offset, unreadOnly = false }) {
+    const sql = unreadOnly ? SELECT_UNREAD_BY_USER : SELECT_BY_USER;
+    const [rows] = await pool.query(sql, [userId, limit, offset]);
     return rows.map(toApiNotification);
   }
 
-  return { saveNotifications, listForUser };
+  // Marca como leidas todas las notificaciones del usuario. Devuelve cuantas
+  // filas cambiaron.
+  async function markAllRead(userId) {
+    const [result] = await pool.query(MARK_ALL_READ, [userId]);
+    return result.affectedRows;
+  }
+
+  return { saveNotifications, listForUser, markAllRead };
 }

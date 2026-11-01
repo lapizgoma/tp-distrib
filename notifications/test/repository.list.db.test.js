@@ -63,6 +63,7 @@ suite('consulta de notificaciones contra la MySQL real', () => {
       newsType: 'EVENT_CREATED',
       title: 'Nuevo evento',
       message: 'Nuevo evento: Evento de prueba de consulta',
+      isRead: false,
       createdAt: '2099-01-01T00:00:02.500Z',
     });
   });
@@ -94,6 +95,31 @@ suite('consulta de notificaciones contra la MySQL real', () => {
 
     expect(all.length).toBeGreaterThanOrEqual(3);
     expect(slice).toEqual(all.slice(1, 3));
+  });
+
+  test('unreadOnly devuelve solo las no leídas y markAllRead las marca todas', async () => {
+    const userId = await firstVisitorId();
+    const messageId = await saveAt(new Date('2099-01-03T00:00:00.000Z'));
+
+    const unreadBefore = await repository.listForUser({
+      userId,
+      limit: 100000,
+      offset: 0,
+      unreadOnly: true,
+    });
+    expect(unreadBefore.some((notification) => notification.messageId === messageId)).toBe(true);
+    expect(unreadBefore.every((notification) => notification.isRead === false)).toBe(true);
+
+    const updated = await repository.markAllRead(userId);
+    expect(updated).toBeGreaterThanOrEqual(1);
+
+    const unreadAfter = await repository.listForUser({
+      userId,
+      limit: 100000,
+      offset: 0,
+      unreadOnly: true,
+    });
+    expect(unreadAfter).toHaveLength(0);
   });
 });
 

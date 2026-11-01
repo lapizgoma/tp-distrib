@@ -19,6 +19,7 @@ El frontend (React + Vite) corre en el host y consume todo a través de `/api`, 
 | `backend-rest` | Java (Spring Boot) | 8081 | API REST |
 | `backend-graphql` | Go | 8082 | API GraphQL |
 | `audit` | Go | 8083 | Consumidor de eventos y API de auditoría |
+| `notifications` | Node.js | 8084 | Consumidor de eventos y API de notificaciones |
 | `api-gateway` | Node.js | 8090 | Gateway de los servicios gRPC |
 | `grpc-works` | Python | 50051 | Servicio gRPC de obras |
 | `grpc-events` | Python | 50052 | Servicio gRPC de eventos |
@@ -113,6 +114,7 @@ Topics creados automáticamente por `kafka-init`:
 
 * `museum.events`: alta, modificación y cancelación de eventos.
 * `audit-dlq`: topic de descarte del consumidor de auditoría.
+* `notification-dlq`: topic de descarte del consumidor de notificaciones.
 
 La tabla `event_outbox` se crea con `init-db/05-schema-3.sql`. Si ya tenías un
 volumen de MySQL con la tabla creada antes de incorporar el diff de auditoría,
@@ -223,6 +225,71 @@ curl "http://localhost:8080/api/audit/events?newsType=EVENT_UPDATED&size=10" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
+## Notificaciones
+
+El servicio `notifications` consume `museum.events` con su propio grupo
+(`notification-service`) y guarda una notificación por destinatario en la tabla
+`notifications`:
+
+* `EVENT_CREATED`: todos los usuarios con rol `VISITANTE`.
+* `EVENT_UPDATED` y `EVENT_CANCELLED`: los usuarios inscriptos al evento.
+
+Deduplica por `(message_id, user_id)`: si el mensaje se reentrega, no se
+duplican filas. El offset de Kafka se confirma recién después del `INSERT`; los
+mensajes inválidos o que agotan los reintentos se copian a `notification-dlq`.
+
+Consulta:
+
+```
+GET   /api/notifications
+PATCH /api/notifications/read
+```
+
+Por el proxy unificado quedan en `http://localhost:8080/api/notifications` y
+`http://localhost:8080/api/notifications/read`; directo al servicio, en el
+puerto `8084`. Requieren un JWT válido (mismo `JWT_SECRET` y `JWT_ISSUER` que
+el backend REST). El `userId` sale del token, así que cada usuario ve solo sus
+notificaciones, sin importar el rol.
+
+`GET /api/notifications`:
+
+| Parámetro | Descripción |
+| --- | --- |
+| `page` | Página, desde `0` (default `0`) |
+| `size` | Tamaño de página entre `1` y `50` (default `20`) |
+| `unreadOnly` | `true` para traer solo las no leídas |
+
+La respuesta tiene la forma `{ "content": [...], "page": 0, "size": 20,
+"hasMore": false }`, de la más nueva a la más vieja. Cada elemento incluye
+`id`, `messageId`, `eventId`, `newsType`, `title`, `message`, `isRead` y
+`createdAt`.
+
+`PATCH /api/notifications/read` marca como leídas todas las notificaciones del
+usuario y responde `204`.
+
+```bash
+curl "http://localhost:8080/api/notifications?unreadOnly=true&size=5" \
+  -H "Authorization: Bearer $TOKEN"
+
+curl -X PATCH "http://localhost:8080/api/notifications/read" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+El frontend muestra una campanita en el header con un punto rojo cuando hay
+notificaciones sin leer (sin mostrar cantidad). Al abrir el panel se listan y se
+marcan como leídas.
+
+La columna `is_read` se crea con `init-db/07-schema-5.sql`. Si ya tenías un
+volumen de MySQL inicializado antes de este cambio, agregala manualmente:
+
+```sql
+ALTER TABLE notifications
+    ADD COLUMN is_read BOOLEAN NOT NULL DEFAULT FALSE AFTER message,
+    ADD KEY idx_notifications_user_read (user_id, is_read, created_at);
+```
+
+También podés recrear el volumen con `docker compose down -v` (borra los datos).
+
 ## Comandos útiles
 
 ```bash
@@ -267,6 +334,7 @@ npm run build
 ├── grpc-users/         # Servicio gRPC de usuarios (Python)
 ├── grpc-works/         # Servicio gRPC de obras (Python)
 ├── init-db/            # Scripts de inicialización de MySQL
+├── notifications/      # Consumidor de eventos y API de notificaciones (Node.js)
 ├── protos/             # Definiciones .proto compartidas
 └── docker-compose.yaml
 ```
