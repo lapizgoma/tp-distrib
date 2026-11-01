@@ -51,9 +51,9 @@ func serveHTTP(ctx context.Context, db *sql.DB, port string, secret []byte, issu
 		writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "service": "audit"})
 	})
 
-	mux.Handle("/api/audit/events", AuthMiddleware(secret, issuer, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/api/audit/events", CORSMiddleware(AuthMiddleware(secret, issuer, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		handleAuditEvents(w, r, db)
-	})))
+	}))))
 
 	server := &http.Server{Addr: ":" + port, Handler: mux}
 
@@ -190,7 +190,6 @@ func handleAuditEvents(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		payloadColumn = "payload_json"
 	}
 
-	
 	sqlText := `SELECT
 		id, message_id, schema_version, news_type, event_id, event_title,
 		event_datetime, event_type, lead_curator_id, responsible_user_id,
@@ -365,4 +364,20 @@ func AuthMiddleware(secret []byte, issuer string, next http.Handler) http.Handle
 func UserFromContext(ctx context.Context) (User, bool) {
 	u, ok := ctx.Value(userKey).(User)
 	return u, ok
+}
+
+// CORSMiddleware permite peticiones desde el navegador (CORS) y responde a las solicitudes Preflight (OPTIONS).
+func CORSMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }

@@ -26,8 +26,12 @@ export function Layout() {
   const roleNavItems = isVisitor
     ? [...navItems, { to: '/recorrido', label: 'Armar recorrido', end: true }]
     : navItems;
+
   const finalNavItems = canSeeReport
-    ? [{ to: '/eventos/reporte', label: 'Reporte', end: false }, ...roleNavItems]
+    ? [{ to: '/eventos/reporte', label: 'Reporte', end: false }, 
+    { to: '/auditoria', label: 'Auditoría', end: true },
+    ...roleNavItems
+      ]
     : roleNavItems;
   const visibleNavItems = isLogged
     ? [...finalNavItems, { to: '/perfil', label: 'Mi perfil', end: true }]
