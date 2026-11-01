@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0b\x65vent.proto\x12\rmuseum.events\"\x99\x01\n\x05\x45vent\x12\n\n\x02id\x18\x01 \x01(\x03\x12\r\n\x05title\x18\x02 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x03 \x01(\t\x12\x10\n\x08\x64\x61tetime\x18\x04 \x01(\t\x12\x10\n\x08\x64uration\x18\x05 \x01(\x05\x12\x10\n\x08location\x18\x06 \x01(\t\x12\x12\n\nevent_type\x18\x07 \x01(\t\x12\x16\n\x0e\x61ssociated_era\x18\x08 \x01(\t\"p\n\x18\x45ventsByLocationsRequest\x12\x11\n\tlocations\x18\x01 \x03(\t\x12\x13\n\x0bonly_future\x18\x02 \x01(\x08\x12\x16\n\x0estart_datetime\x18\x03 \x01(\t\x12\x14\n\x0c\x65nd_datetime\x18\x04 \x01(\t\"!\n\x12\x45ventsByEraRequest\x12\x0b\n\x03\x65ra\x18\x01 \x01(\t\"9\n\x11\x45ventListResponse\x12$\n\x06\x65vents\x18\x01 \x03(\x0b\x32\x14.museum.events.Event2\xc8\x01\n\x0c\x45ventService\x12\x61\n\x14GetEventsByLocations\x12\'.museum.events.EventsByLocationsRequest\x1a .museum.events.EventListResponse\x12U\n\x0eGetEventsByEra\x12!.museum.events.EventsByEraRequest\x1a .museum.events.EventListResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0b\x65vent.proto\x12\rmuseum.events\"\x99\x01\n\x05\x45vent\x12\n\n\x02id\x18\x01 \x01(\x03\x12\r\n\x05title\x18\x02 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x03 \x01(\t\x12\x10\n\x08\x64\x61tetime\x18\x04 \x01(\t\x12\x10\n\x08\x64uration\x18\x05 \x01(\x05\x12\x10\n\x08location\x18\x06 \x01(\t\x12\x12\n\nevent_type\x18\x07 \x01(\t\x12\x16\n\x0e\x61ssociated_era\x18\x08 \x01(\t\"p\n\x18\x45ventsByLocationsRequest\x12\x11\n\tlocations\x18\x01 \x03(\t\x12\x13\n\x0bonly_future\x18\x02 \x01(\x08\x12\x16\n\x0estart_datetime\x18\x03 \x01(\t\x12\x14\n\x0c\x65nd_datetime\x18\x04 \x01(\t\"!\n\x12\x45ventsByEraRequest\x12\x0b\n\x03\x65ra\x18\x01 \x01(\t\"N\n\x10RoomScheduleSlot\x12\x0c\n\x04room\x18\x01 \x01(\t\x12\x16\n\x0estart_datetime\x18\x02 \x01(\t\x12\x14\n\x0c\x65nd_datetime\x18\x03 \x01(\t\"N\n\x14\x45ventsForTourRequest\x12\x36\n\rroom_schedule\x18\x01 \x03(\x0b\x32\x1f.museum.events.RoomScheduleSlot\"9\n\x11\x45ventListResponse\x12$\n\x06\x65vents\x18\x01 \x03(\x0b\x32\x14.museum.events.Event2\xa3\x02\n\x0c\x45ventService\x12\x61\n\x14GetEventsByLocations\x12\'.museum.events.EventsByLocationsRequest\x1a .museum.events.EventListResponse\x12U\n\x0eGetEventsByEra\x12!.museum.events.EventsByEraRequest\x1a .museum.events.EventListResponse\x12Y\n\x10GetEventsForTour\x12#.museum.events.EventsForTourRequest\x1a .museum.events.EventListResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -37,8 +37,12 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_EVENTSBYLOCATIONSREQUEST']._serialized_end=298
   _globals['_EVENTSBYERAREQUEST']._serialized_start=300
   _globals['_EVENTSBYERAREQUEST']._serialized_end=333
-  _globals['_EVENTLISTRESPONSE']._serialized_start=335
-  _globals['_EVENTLISTRESPONSE']._serialized_end=392
-  _globals['_EVENTSERVICE']._serialized_start=395
-  _globals['_EVENTSERVICE']._serialized_end=595
+  _globals['_ROOMSCHEDULESLOT']._serialized_start=335
+  _globals['_ROOMSCHEDULESLOT']._serialized_end=413
+  _globals['_EVENTSFORTOURREQUEST']._serialized_start=415
+  _globals['_EVENTSFORTOURREQUEST']._serialized_end=493
+  _globals['_EVENTLISTRESPONSE']._serialized_start=495
+  _globals['_EVENTLISTRESPONSE']._serialized_end=552
+  _globals['_EVENTSERVICE']._serialized_start=555
+  _globals['_EVENTSERVICE']._serialized_end=846
 # @@protoc_insertion_point(module_scope)

@@ -13,6 +13,7 @@ from .tour_planner import (
     plan_tour_with_fallback,
     tour_rooms,
 )
+from .tour_schedule import build_room_schedule
 
 WORKS_QUERY = """
     SELECT
@@ -116,9 +117,32 @@ def search_works_for_tour(request) -> work_pb2.TourPlanResponse:
         preferred_techniques=request.preferred_techniques,
         transition_minutes=transition_minutes,
     )
-    return work_pb2.TourPlanResponse(
+    total_duration_minutes = calculate_total_duration(selected, transition_minutes)
+    rooms = tour_rooms(selected)
+    response = work_pb2.TourPlanResponse(
         works=[candidate_to_proto(work) for work in selected],
-        total_duration_minutes=calculate_total_duration(selected, transition_minutes),
-        rooms=tour_rooms(selected),
+        total_duration_minutes=total_duration_minutes,
+        rooms=rooms,
         notes=notes,
     )
+
+    start_datetime = (request.start_datetime or "").strip()
+    if start_datetime:
+        schedule = build_room_schedule(
+            selected,
+            rooms,
+            total_duration_minutes,
+            start_datetime,
+        )
+        response.start_datetime = schedule.start_datetime
+        response.end_datetime = schedule.end_datetime
+        response.room_schedule.extend(
+            work_pb2.RoomSchedule(
+                room=slot.room,
+                start_datetime=slot.start_datetime,
+                end_datetime=slot.end_datetime,
+            )
+            for slot in schedule.room_schedule
+        )
+
+    return response

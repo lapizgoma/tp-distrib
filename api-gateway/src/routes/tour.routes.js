@@ -2,12 +2,7 @@ import express from 'express';
 import config from '../config.js';
 import auth from '../middleware/auth.js';
 import { sendGrpcError } from '../utils/grpcErrors.js';
-import {
-  buildRoomSchedule,
-  filterEventsBySchedule,
-  formatLocalDateTime,
-  isValidStartDatetime,
-} from '../utils/tourSchedule.js';
+import { formatLocalDateTime, isValidStartDatetime } from '../utils/datetime.js';
 
 const ARRAY_FIELDS = ['topics', 'eras', 'techniques'];
 const LIMIT_FIELDS = ['max_duration_minutes', 'max_works_count'];
@@ -123,7 +118,14 @@ export default function tourRoutes({ clients, call }) {
       const preferences = body.use_preferences === false
         ? emptyPreferences()
         : await loadPreferences(call, clients, req.user);
-      const criteria = { ...toCriteria(body), ...preferences };
+      const startDatetime = hasStartDatetime(body.start_datetime)
+        ? String(body.start_datetime).trim()
+        : formatLocalDateTime(new Date());
+      const criteria = {
+        ...toCriteria(body),
+        ...preferences,
+        start_datetime: startDatetime,
+      };
 
       const plan = await call(
         clients.works,
@@ -132,38 +134,27 @@ export default function tourRoutes({ clients, call }) {
         req.user,
       );
 
-      const startDatetime = hasStartDatetime(body.start_datetime)
-        ? String(body.start_datetime).trim()
-        : formatLocalDateTime(new Date());
-      const schedule = buildRoomSchedule(plan, startDatetime);
-      if (!schedule) {
-        return res.status(400).json({
-          error: 'start_datetime debe tener formato YYYY-MM-DDTHH:mm',
-        });
-      }
-
-      let events = [];
       const rooms = plan.rooms ?? [];
-      if (rooms.length > 0) {
+      const roomSchedule = plan.room_schedule ?? [];
+      let events = [];
+      if (rooms.length > 0 && roomSchedule.length > 0) {
         const eventResponse = await call(
           clients.events,
-          'GetEventsByLocations',
-          {
-            locations: rooms,
-            only_future: false,
-            start_datetime: schedule.start_datetime,
-            end_datetime: schedule.end_datetime,
-          },
+          'GetEventsForTour',
+          { room_schedule: roomSchedule },
           req.user,
         );
-        events = filterEventsBySchedule(eventResponse.events ?? [], schedule.room_schedule);
+        events = eventResponse.events ?? [];
       }
 
       res.json({
-        ...plan,
-        start_datetime: schedule.start_datetime,
-        end_datetime: schedule.end_datetime,
-        room_schedule: schedule.room_schedule,
+        works: plan.works ?? [],
+        total_duration_minutes: plan.total_duration_minutes ?? 0,
+        rooms,
+        notes: plan.notes ?? [],
+        start_datetime: plan.start_datetime || startDatetime,
+        end_datetime: plan.end_datetime || startDatetime,
+        room_schedule: roomSchedule,
         events,
       });
     } catch (err) {
