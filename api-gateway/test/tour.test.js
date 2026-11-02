@@ -49,6 +49,20 @@ const plan = {
   total_duration_minutes: 30,
   rooms: ["sala_2_impresionismo", "sala_4_arte_moderno"],
   notes: [],
+  start_datetime: "2026-11-01T10:00:00",
+  end_datetime: "2026-11-01T10:30:00",
+  room_schedule: [
+    {
+      room: "sala_2_impresionismo",
+      start_datetime: "2026-11-01T10:00:00",
+      end_datetime: "2026-11-01T10:20:00",
+    },
+    {
+      room: "sala_4_arte_moderno",
+      start_datetime: "2026-11-01T10:25:00",
+      end_datetime: "2026-11-01T10:30:00",
+    },
+  ],
 };
 
 const startedCriteria = {
@@ -88,7 +102,28 @@ function mockCalls({ tourPlan = plan, events = eventsPayload, userProfile = empt
   call.mockImplementation((client, method) => {
     if (method === "GetUserProfile") return Promise.resolve(userProfile);
     if (method === "SearchWorksForTour") return Promise.resolve(tourPlan);
-    if (method === "GetEventsByLocations") return Promise.resolve(events);
+    if (method === "GetEventsForTour") return Promise.resolve(events);
+    return Promise.reject(new Error(`método inesperado: ${method}`));
+  });
+}
+
+// Simula a works devolviendo una agenda calculada a partir del start recibido.
+function mockCallsWithGeneratedStart(events = eventsPayload) {
+  call.mockImplementation((client, method, request) => {
+    if (method === "GetUserProfile") return Promise.resolve(emptyProfile);
+    if (method === "SearchWorksForTour") {
+      return Promise.resolve({
+        ...plan,
+        start_datetime: request.start_datetime,
+        end_datetime: request.start_datetime,
+        room_schedule: plan.rooms.map((room) => ({
+          room,
+          start_datetime: request.start_datetime,
+          end_datetime: request.start_datetime,
+        })),
+      });
+    }
+    if (method === "GetEventsForTour") return Promise.resolve(events);
     return Promise.reject(new Error(`método inesperado: ${method}`));
   });
 }
@@ -129,6 +164,20 @@ const scheduledPlan = {
   total_duration_minutes: 50,
   rooms: ["sala_2_impresionismo", "sala_4_arte_moderno"],
   notes: [],
+  start_datetime: "2026-11-01T10:00:00",
+  end_datetime: "2026-11-01T10:50:00",
+  room_schedule: [
+    {
+      room: "sala_2_impresionismo",
+      start_datetime: "2026-11-01T10:00:00",
+      end_datetime: "2026-11-01T10:30:00",
+    },
+    {
+      room: "sala_4_arte_moderno",
+      start_datetime: "2026-11-01T10:35:00",
+      end_datetime: "2026-11-01T10:50:00",
+    },
+  ],
 };
 
 const scheduledCriteria = startedCriteria;
@@ -263,20 +312,6 @@ describe("éxito", () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       ...plan,
-      start_datetime: "2026-11-01T10:00:00",
-      end_datetime: "2026-11-01T10:30:00",
-      room_schedule: [
-        {
-          room: "sala_2_impresionismo",
-          start_datetime: "2026-11-01T10:00:00",
-          end_datetime: "2026-11-01T10:20:00",
-        },
-        {
-          room: "sala_4_arte_moderno",
-          start_datetime: "2026-11-01T10:25:00",
-          end_datetime: "2026-11-01T10:30:00",
-        },
-      ],
       events: eventsPayload.events,
     });
     expect(call).toHaveBeenNthCalledWith(
@@ -291,25 +326,26 @@ describe("éxito", () => {
       2,
       worksClient,
       "SearchWorksForTour",
-      withPreferences(criteria),
+      withPreferences({ ...criteria, start_datetime: "2026-11-01T10:00" }),
       user,
     );
     expect(call).toHaveBeenNthCalledWith(
       3,
       eventsClient,
-      "GetEventsByLocations",
-      {
-        locations: plan.rooms,
-        only_future: false,
-        start_datetime: "2026-11-01T10:00:00",
-        end_datetime: "2026-11-01T10:30:00",
-      },
+      "GetEventsForTour",
+      { room_schedule: plan.room_schedule },
       user,
     );
   });
 
-  test("agenda salas y filtra eventos por franja", async () => {
-    mockCalls({ tourPlan: scheduledPlan, events: { events: scheduledEvents } });
+  test("reenvía la agenda de works para consultar los eventos", async () => {
+    const filteredEvents = scheduledEvents.filter((event) =>
+      ["20", "22", "23"].includes(event.id),
+    );
+    mockCalls({
+      tourPlan: scheduledPlan,
+      events: { events: filteredEvents },
+    });
 
     const res = await request(app)
       .post(URL)
@@ -319,36 +355,20 @@ describe("éxito", () => {
     expect(res.status).toBe(200);
     expect(res.body.start_datetime).toBe("2026-11-01T10:00:00");
     expect(res.body.end_datetime).toBe("2026-11-01T10:50:00");
-    expect(res.body.room_schedule).toEqual([
-      {
-        room: "sala_2_impresionismo",
-        start_datetime: "2026-11-01T10:00:00",
-        end_datetime: "2026-11-01T10:30:00",
-      },
-      {
-        room: "sala_4_arte_moderno",
-        start_datetime: "2026-11-01T10:35:00",
-        end_datetime: "2026-11-01T10:50:00",
-      },
-    ]);
+    expect(res.body.room_schedule).toEqual(scheduledPlan.room_schedule);
     expect(res.body.events.map((event) => event.id)).toEqual(["20", "22", "23"]);
     expect(call).toHaveBeenNthCalledWith(
       2,
       worksClient,
       "SearchWorksForTour",
-      withPreferences(criteria),
+      withPreferences({ ...criteria, start_datetime: "2026-11-01T10:00" }),
       user,
     );
     expect(call).toHaveBeenNthCalledWith(
       3,
       eventsClient,
-      "GetEventsByLocations",
-      {
-        locations: scheduledPlan.rooms,
-        only_future: false,
-        start_datetime: "2026-11-01T10:00:00",
-        end_datetime: "2026-11-01T10:50:00",
-      },
+      "GetEventsForTour",
+      { room_schedule: scheduledPlan.room_schedule },
       user,
     );
   });
@@ -371,7 +391,10 @@ describe("éxito", () => {
       2,
       worksClient,
       "SearchWorksForTour",
-      withPreferences(criteria, profilePreferences),
+      withPreferences(
+        { ...criteria, start_datetime: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/) },
+        profilePreferences,
+      ),
       user,
     );
   });
@@ -389,14 +412,17 @@ describe("éxito", () => {
       1,
       worksClient,
       "SearchWorksForTour",
-      withPreferences(criteria),
+      withPreferences({
+        ...criteria,
+        start_datetime: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/),
+      }),
       user,
     );
     expect(call).toHaveBeenNthCalledWith(
       2,
       eventsClient,
-      "GetEventsByLocations",
-      expect.objectContaining({ locations: plan.rooms }),
+      "GetEventsForTour",
+      { room_schedule: plan.room_schedule },
       user,
     );
     expect(call).not.toHaveBeenCalledWith(
@@ -414,7 +440,7 @@ describe("éxito", () => {
         return Promise.reject(grpcError(grpc.status.UNAVAILABLE, "users caído"));
       }
       if (method === "SearchWorksForTour") return Promise.resolve(plan);
-      if (method === "GetEventsByLocations") return Promise.resolve(eventsPayload);
+      if (method === "GetEventsForTour") return Promise.resolve(eventsPayload);
       return Promise.reject(new Error(`método inesperado: ${method}`));
     });
 
@@ -425,7 +451,10 @@ describe("éxito", () => {
       2,
       worksClient,
       "SearchWorksForTour",
-      withPreferences(criteria),
+      withPreferences({
+        ...criteria,
+        start_datetime: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/),
+      }),
       user,
     );
   });
@@ -443,13 +472,16 @@ describe("éxito", () => {
       2,
       worksClient,
       "SearchWorksForTour",
-      withPreferences(criteria),
+      withPreferences({
+        ...criteria,
+        start_datetime: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/),
+      }),
       user,
     );
   });
 
   test("body vacío aplica criterios por defecto", async () => {
-    mockCalls();
+    mockCallsWithGeneratedStart();
 
     const res = await request(app).post(URL).set(bearer()).send({});
 
@@ -467,25 +499,21 @@ describe("éxito", () => {
         techniques: [],
         max_duration_minutes: 0,
         max_works_count: 0,
+        start_datetime: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/),
       }),
       user,
     );
     expect(call).toHaveBeenNthCalledWith(
       3,
       eventsClient,
-      "GetEventsByLocations",
-      {
-        locations: plan.rooms,
-        only_future: false,
-        start_datetime: res.body.start_datetime,
-        end_datetime: res.body.end_datetime,
-      },
+      "GetEventsForTour",
+      { room_schedule: res.body.room_schedule },
       user,
     );
   });
 
   test("start_datetime vacío usa la hora actual", async () => {
-    mockCalls();
+    mockCallsWithGeneratedStart();
 
     const res = await request(app)
       .post(URL)
@@ -499,13 +527,22 @@ describe("éxito", () => {
       2,
       worksClient,
       "SearchWorksForTour",
-      withPreferences(criteria),
+      withPreferences({
+        ...criteria,
+        start_datetime: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/),
+      }),
       user,
     );
   });
 
   test("sin salas no consulta eventos y devuelve events vacío", async () => {
-    const emptyPlan = { ...plan, works: [], rooms: [] };
+    const emptyPlan = {
+      ...plan,
+      works: [],
+      rooms: [],
+      room_schedule: [],
+      end_datetime: "2026-11-01T10:00:00",
+    };
     mockCalls({ tourPlan: emptyPlan });
 
     const res = await request(app).post(URL).set(bearer()).send(startedCriteria);
@@ -513,9 +550,6 @@ describe("éxito", () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       ...emptyPlan,
-      start_datetime: "2026-11-01T10:00:00",
-      end_datetime: "2026-11-01T10:00:00",
-      room_schedule: [],
       events: [],
     });
     expect(call).toHaveBeenCalledTimes(2);
@@ -523,7 +557,7 @@ describe("éxito", () => {
       2,
       worksClient,
       "SearchWorksForTour",
-      withPreferences(criteria),
+      withPreferences({ ...criteria, start_datetime: "2026-11-01T10:00" }),
       user,
     );
   });
@@ -553,7 +587,7 @@ describe("traducción de errores gRPC", () => {
     call.mockImplementation((client, method) => {
       if (method === "GetUserProfile") return Promise.resolve(emptyProfile);
       if (method === "SearchWorksForTour") return Promise.resolve(plan);
-      if (method === "GetEventsByLocations") {
+      if (method === "GetEventsForTour") {
         return Promise.reject(grpcError(grpc.status.DEADLINE_EXCEEDED, "events timeout"));
       }
       return Promise.reject(new Error(`método inesperado: ${method}`));

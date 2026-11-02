@@ -21,6 +21,22 @@ spring:
     init:
       mode: never
 
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer
+      acks: all
+      properties:
+        "enable.idempotence": true
+        "retry.backoff.ms": 1000
+        "max.in.flight.requests.per.connection": 5
+        "max.block.ms": 5000
+        "request.timeout.ms": 5000
+        "delivery.timeout.ms": 15000
+        # Payload JSON limpio para consumidores Go/Python, sin headers de tipo de Spring
+        "spring.json.add.type.headers": false
+
 server:
   port: 8081
 
@@ -30,6 +46,16 @@ app:
       issuer: ${JWT_ISSUER:museo-virtual}
       secret: ${JWT_SECRET:dev-only-secret-key-change-me-please-0123456789}
       expiration: ${JWT_EXPIRATION:3600}
+  kafka:
+    topics:
+      events: ${KAFKA_TOPIC_EVENTS:museum.events}
+    outbox:
+      poll-interval-ms: 2000
+      initial-delay-ms: 5000
+      batch-size: 50
+      send-timeout-seconds: 15
+      base-backoff-ms: 1000
+      max-backoff-ms: 60000
 
 springdoc:
   api-docs:

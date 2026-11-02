@@ -9,6 +9,7 @@ import mysql.connector
 
 from app.cases.get_events_by_era import get_events_by_era
 from app.cases.get_events_by_locations import get_events_by_locations
+from app.cases.get_events_for_tour import get_events_for_tour
 from app.config import load_env
 from app.generated import event_pb2_grpc
 
@@ -36,6 +37,17 @@ class EventServiceServicer(event_pb2_grpc.EventServiceServicer):
             context.abort(grpc.StatusCode.INTERNAL, "database error")
         except Exception:
             logging.exception("GetEventsByEra unexpected error")
+            context.abort(grpc.StatusCode.INTERNAL, "internal error")
+
+    def GetEventsForTour(self, request, context):
+        """Devuelve los eventos que solapan la franja de cada sala."""
+        try:
+            return get_events_for_tour(request)
+        except mysql.connector.Error:
+            logging.exception("GetEventsForTour database error")
+            context.abort(grpc.StatusCode.INTERNAL, "database error")
+        except Exception:
+            logging.exception("GetEventsForTour unexpected error")
             context.abort(grpc.StatusCode.INTERNAL, "internal error")
 
 

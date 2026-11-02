@@ -3,35 +3,19 @@ import { Landmark, LogIn, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from 'cn';
 import { Button } from '@/components/ui/button';
+import { NotificationsBell } from '@/features/notifications/components/NotificationsBell';
+import { canAccess } from '@/shared/auth/permissions';
+import { NAV_ITEMS } from '@/shared/config/navItems';
 import { isTokenValid, useAuthStore } from '@/shared/store/authStore';
-
-const navItems = [
-  { to: '/', label: 'Inicio', end: true },
-  { to: '/eventos', label: 'Eventos', end: true },
-  { to: '/eventos/mis-filtros', label: 'Mis filtros', end: true },
-  { to: '/obras', label: 'Catálogo', end: false },
-  { to: '/explorar', label: 'Explorar por Era', end: true },
-];
 
 export function Layout() {
   const navigate = useNavigate();
   const token = useAuthStore((state) => state.token);
+  const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
 
   const isLogged = isTokenValid(token);
-
-  const user = useAuthStore((state) => state.user);
-  const canSeeReport = user?.role === 'CURADOR' || user?.role === 'ADMINISTRADOR';
-  const isVisitor = user?.role === 'VISITANTE';
-  const roleNavItems = isVisitor
-    ? [...navItems, { to: '/recorrido', label: 'Armar recorrido', end: true }]
-    : navItems;
-  const finalNavItems = canSeeReport
-    ? [{ to: '/eventos/reporte', label: 'Reporte', end: false }, ...roleNavItems]
-    : roleNavItems;
-  const visibleNavItems = isLogged
-    ? [...finalNavItems, { to: '/perfil', label: 'Mi perfil', end: true }]
-    : finalNavItems;
+  const visibleNavItems = NAV_ITEMS.filter((item) => canAccess(item.policy, { token, user }));
 
   const handleLogout = () => {
     logout();
@@ -56,7 +40,7 @@ export function Layout() {
             <NavLink
               key={item.to}
               to={item.to}
-              end={item.end}
+              end={item.end ?? true}
               className={({ isActive }) =>
                 cn(
                   'text-sm font-medium text-muted-foreground transition-colors hover:text-foreground',
@@ -68,17 +52,20 @@ export function Layout() {
             </NavLink>
           ))}
 
-          {isLogged ? (
-            <Button variant="outline" size="sm" onClick={handleLogout}>
-              <LogOut className="size-4" />
-              Cerrar sesión
-            </Button>
-          ) : (
-            <Button size="sm" onClick={() => navigate('/login')}>
-              <LogIn className="size-4" />
-              Iniciar sesión
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {isLogged && <NotificationsBell />}
+            {isLogged ? (
+              <Button variant="outline" size="sm" onClick={handleLogout}>
+                <LogOut className="size-4" />
+                Cerrar sesión
+              </Button>
+            ) : (
+              <Button size="sm" onClick={() => navigate('/login')}>
+                <LogIn className="size-4" />
+                Iniciar sesión
+              </Button>
+            )}
+          </div>
         </nav>
       </header>
 

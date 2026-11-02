@@ -15,6 +15,7 @@ import { ReportView } from "./features/reports/views/ReportView";
 import { CompareWorksView } from "./features/works/components/CompareWorksView";
 import { ExplorationView } from './features/exploration/views/ExplorationView';
 import { HomeView } from './features/home/views/HomeView';
+import { AuditLogsView } from "@/features/audit/views/AuditLogsView";
 
 export function AppRouter() {
     return (
@@ -55,6 +56,7 @@ export function AppRouter() {
                         <Route path="eventos/nuevo" element={<EventFormView />} />
                         <Route path="eventos/:id/editar" element={<EventFormView />} />
                         <Route path="eventos/reporte" element={<ReportView />} />
+                        <Route path="auditoria" element={<AuditLogsView />} />
                     </Route>
                 </Route>
                 <Route path="*" element={<Navigate to="/" />} />

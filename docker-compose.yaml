@@ -23,6 +23,71 @@ services:
       timeout: 5s
       retries: 5
 
+  # Kafka en modo KRaft (sin ZooKeeper)
+  kafka:
+    image: apache/kafka:4.3.1
+    container_name: museo-kafka
+    restart: unless-stopped
+    ports:
+      - "${KAFKA_PORT:-29092}:29092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,PLAINTEXT_HOST://0.0.0.0:29092"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_LOG_DIRS: "/var/lib/kafka/data"
+      KAFKA_CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # Crea los topics una sola vez, cuando el broker ya está sano
+  kafka-init:
+    image: apache/kafka:4.3.1
+    container_name: museo-kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic museum.events --partitions 3 --replication-factor 1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic audit-dlq --partitions 1 --replication-factor 1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic notification-dlq --partitions 1 --replication-factor 1
+    restart: "no"
+
+  # UI opcional para inspeccionar topics y mensajes durante la demo
+  kafka-ui:
+    image: ghcr.io/kafbat/kafka-ui:v1.5.0
+    container_name: museo-kafka-ui
+    profiles: ["rest", "full"]
+    ports:
+      - "${KAFKA_UI_PORT:-8085}:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    depends_on:
+      kafka:
+        condition: service_healthy
+
   # Servidor Backend REST (Java) - Perfil: rest
   backend-rest:
     profiles: ["rest", "full"]
@@ -44,9 +109,101 @@ services:
       JWT_SECRET: ${JWT_SECRET:-dev-only-secret-key-change-me-please-0123456789}
       JWT_ISSUER: ${JWT_ISSUER:-museo-virtual}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-3600}
+
+      # Kafka Configuration
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
       mysql:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+
+  # Consumidor de auditoría (Go) - Perfil: rest, full
+  audit:
+    profiles: ["rest", "full"]
+    build:
+      context: ./audit
+      dockerfile: Dockerfile
+    container_name: museo-audit
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    environment:
+      TP_DISTRIB_DB_ADDR: ${DB_HOST:-mysql}:${DB_PORT:-3306}
+      TP_DISTRIB_DB_USERNAME: ${DB_USER:-root}
+      TP_DISTRIB_DB_PASSWORD: ${DB_PASSWORD:-root}
+      TP_DISTRIB_DB_NAME: ${DB_NAME:-museo_virtual}
+
+      # Kafka Configuration
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPIC_EVENTS: museum.events
+      KAFKA_TOPIC_DLQ: audit-dlq
+      KAFKA_GROUP_ID: audit-service
+
+      # Mismo JWT que backend-rest y backend-graphql
+      JWT_SECRET: ${JWT_SECRET:-dev-only-secret-key-change-me-please-0123456789}
+      JWT_ISSUER: ${JWT_ISSUER:-museo-virtual}
+
+      PORT: "8083"
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8083/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    depends_on:
+      mysql:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+
+  # Consumidor de notificaciones (Node.js) - Perfil: rest, full
+  notifications:
+    profiles: ["rest", "full"]
+    build:
+      context: ./notifications
+      dockerfile: Dockerfile
+    container_name: museo-notifications
+    restart: unless-stopped
+    ports:
+      - "8084:8084"
+    environment:
+      DB_HOST: ${DB_HOST:-mysql}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME:-museo_virtual}
+      DB_USER: ${DB_USER:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-root}
+
+      # Kafka Configuration
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPIC_EVENTS: museum.events
+      KAFKA_TOPIC_DLQ: notification-dlq
+      KAFKA_GROUP_ID: notification-service
+
+      # Mismo JWT que backend-rest, backend-graphql y audit
+      JWT_SECRET: ${JWT_SECRET:-dev-only-secret-key-change-me-please-0123456789}
+      JWT_ISSUER: ${JWT_ISSUER:-museo-virtual}
+
+      PORT: "8084"
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8084/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    depends_on:
+      mysql:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
 
   # Servidor Backend GraphQL (Go) - Perfil: graphql
   backend-graphql:
@@ -87,10 +244,14 @@ services:
       REST_TARGET: http://backend-rest:8081
       GQL_TARGET: http://backend-graphql:8082
       GATEWAY_TARGET: http://api-gateway:8090
+      NOTIFICATIONS_TARGET: http://notifications:8084
+      AUDIT_TARGET: http://audit:8083
       PORT: "8080"
     depends_on:
       - backend-rest
       - backend-graphql
+      - audit
+      - notifications
 
   # Servidor gRPC Works (Python) - Perfil: grpc
   grpc-works:
@@ -187,3 +348,4 @@ services:
 
 volumes:
   mysql-data:
+  kafka-data:

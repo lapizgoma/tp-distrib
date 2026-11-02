@@ -69,7 +69,7 @@ public class ReportService {
         LocalDateTime now = LocalDateTime.now();
 
         return eventRepository
-                .findAll(EventSpecifications.withReportFilters(filter), Sort.by(Sort.Direction.ASC, "datetime"))
+                .findAll(EventSpecifications.withReportFilters(filter), Sort.by(Sort.Direction.ASC, Event::getDatetime))
                 .stream()
                 .filter(event -> matchesStatus(event, filter, now))
                 .collect(Collectors.groupingBy(
