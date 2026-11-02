@@ -12,7 +12,9 @@ services:
       MYSQL_DATABASE: ${DB_NAME:-museo_virtual}
       LANG: C.UTF-8
     ports:
-      - "${DB_PORT:-3306}:3306"
+      # Puerto publicado en el host. No confundir con DB_PORT, que es el
+      # puerto interno que usan los demas servicios dentro de la red de Docker.
+      - "${DB_HOST_PORT:-3306}:3306"
     volumes:
       - mysql-data:/var/lib/mysql
       # Copio los scrips e inicializo la BD automáticamente
